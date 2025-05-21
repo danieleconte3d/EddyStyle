@@ -7,7 +7,8 @@
     "start": "electron .",
     "dev": "concurrently \"cd src && npm start\" \"wait-on http://localhost:3000 && electron .\"",
     "build": "cd src && npm run build",
-    "package": "electron-builder"
+    "package": "electron-builder",
+    "publish": "electron-builder --publish always"
   },
   "author": "",
   "license": "ISC",
@@ -30,5 +31,30 @@
   "dependencies": {
     "electron-updater": "^6.6.2",
     "swiper": "^11.2.7"
+  },
+  "build": {
+    "appId": "com.eddystyle.app",
+    "productName": "Eddy Style",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      "node_modules/**/*",
+      "main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "publish": {
+      "provider": "github",
+      "token": "il_tuo_token_github"
+    }
   }
 }
