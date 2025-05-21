@@ -1,0 +1,34 @@
+{
+  "name": "eddy-style",
+  "version": "0.0.1",
+  "description": "Applicazione di gestione per parrucchieri",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"cd src && npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "build": "cd src && npm run build",
+    "package": "electron-builder"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^28.1.0",
+    "electron-builder": "^24.9.1",
+    "glob": "^10.3.10",
+    "wait-on": "^7.2.0"
+  },
+  "resolutions": {
+    "glob": "^10.3.10",
+    "inflight": "^2.0.0",
+    "boolean": "^3.2.0",
+    "**/glob": "^10.3.10",
+    "**/inflight": "^2.0.0",
+    "**/boolean": "^3.2.0",
+    "**/boolean/**": "^3.2.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2",
+    "swiper": "^11.2.7"
+  }
+}
