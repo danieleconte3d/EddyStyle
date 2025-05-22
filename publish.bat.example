@@ -1,0 +1,16 @@
+@echo off
+rem Questo è un file di esempio. Crea una copia chiamata publish.bat e imposta il tuo token.
+rem Per utilizzare questo script:
+rem 1. Copia questo file come publish.bat
+rem 2. Imposta la variabile d'ambiente GITHUB_TOKEN con il tuo token
+rem    - Su Windows: setx GITHUB_TOKEN "il_tuo_token"
+rem    - Su Linux/Mac: export GITHUB_TOKEN="il_tuo_token"
+
+set GH_TOKEN=%GITHUB_TOKEN%
+if "%GH_TOKEN%"=="" (
+    echo Errore: Variabile d'ambiente GITHUB_TOKEN non impostata
+    exit /b 1
+)
+
+set ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES=true
+npm run publish 
