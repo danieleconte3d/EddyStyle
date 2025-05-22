@@ -1,6 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Snackbar, Alert, Button, LinearProgress, Typography, Box } from '@mui/material';
-const { ipcRenderer } = window.require('electron');
+
+// Verifica se siamo in Electron
+const isElectron = () => {
+  return window && window.process && window.process.type === 'renderer';
+};
+
+// Ottieni ipcRenderer solo se siamo in Electron
+let ipcRenderer = null;
+if (isElectron()) {
+  try {
+    ipcRenderer = window.require('electron').ipcRenderer;
+  } catch (error) {
+    console.error('Errore durante il caricamento di electron:', error);
+  }
+}
 
 function UpdateNotification() {
   const [notification, setNotification] = useState(null);
@@ -9,6 +23,9 @@ function UpdateNotification() {
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
+    // Se non siamo in Electron, non fare nulla
+    if (!ipcRenderer) return;
+    
     // Ascolta i messaggi di aggiornamento
     ipcRenderer.on('update-message', (_, message) => {
       setNotification(message);
@@ -35,13 +52,18 @@ function UpdateNotification() {
   }, []);
 
   const handleStartUpdate = () => {
+    if (!ipcRenderer) return;
     setIsDownloading(true);
     ipcRenderer.send('start-update');
   };
 
   const handleRestartApp = () => {
+    if (!ipcRenderer) return;
     ipcRenderer.send('restart-app');
   };
+
+  // Se non siamo in Electron, non mostrare nulla
+  if (!ipcRenderer) return null;
 
   return (
     <>

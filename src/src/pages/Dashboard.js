@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Button, Typography, Container, Grid } from '@mui/material';
 import RadioIcon from '@mui/icons-material/Radio';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import PeopleIcon from '@mui/icons-material/People';
 import WindowControls from '../components/WindowControls';
 
 function Dashboard() {
   const navigate = useNavigate();
+
+  // Log per debugging
+  useEffect(() => {
+    console.log('Dashboard component mounted');
+  }, []);
 
   const buttons = [
     {
@@ -27,44 +33,73 @@ function Dashboard() {
       icon: <InventoryIcon sx={{ fontSize: 60 }} />,
       path: '/magazzino',
       color: '#4caf50'
+    },
+    {
+      title: 'Personale',
+      icon: <PeopleIcon sx={{ fontSize: 60 }} />,
+      path: '/personale',
+      color: '#ff9800'
     }
   ];
 
   return (
-    <Container maxWidth="lg" sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth={false} disableGutters sx={{ 
+      height: '100%', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
       <WindowControls />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-        <Typography variant="h2" component="h1" gutterBottom sx={{ mb: 8, color: 'primary.main' }}>
+      <Box sx={{ 
+        flexGrow: 1, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        px: 2,
+        py: 4 
+      }}>
+        <Typography 
+          variant="h2" 
+          component="h1" 
+          gutterBottom 
+          sx={{ mb: { xs: 4, sm: 8 }, color: 'primary.main', textAlign: 'center' }}
+        >
           Eddy Style
         </Typography>
         
-        <Grid container spacing={4} justifyContent="center">
-          {buttons.map((button) => (
-            <Grid item key={button.title}>
-              <Button
-                variant="contained"
-                onClick={() => navigate(button.path)}
-                sx={{
-                  width: 200,
-                  height: 200,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 2,
-                  backgroundColor: button.color,
-                  '&:hover': {
+        <Box sx={{ width: '100%', maxWidth: 1000, mx: 'auto' }}>
+          <Grid container spacing={4} justifyContent="center">
+            {buttons.map((button) => (
+              <Grid item key={button.title} xs={12} sm={6} md={4}>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    console.log(`Navigating to ${button.path}`);
+                    navigate(button.path);
+                  }}
+                  sx={{
+                    width: '100%',
+                    minHeight: { xs: 120, sm: 180 },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
                     backgroundColor: button.color,
-                    opacity: 0.9
-                  }
-                }}
-              >
-                {button.icon}
-                <Typography variant="h5" component="span">
-                  {button.title}
-                </Typography>
-              </Button>
-            </Grid>
-          ))}
-        </Grid>
+                    '&:hover': {
+                      backgroundColor: button.color,
+                      opacity: 0.9
+                    }
+                  }}
+                >
+                  {button.icon}
+                  <Typography variant="h5" component="span">
+                    {button.title}
+                  </Typography>
+                </Button>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       </Box>
     </Container>
   );

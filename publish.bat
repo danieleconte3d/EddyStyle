@@ -1,0 +1,4 @@
+@echo off
+set GH_TOKEN=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
+set ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES=true
+npm run publish 

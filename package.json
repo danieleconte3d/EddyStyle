@@ -5,15 +5,17 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently \"cd src && npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "dev": "cross-env NODE_ENV=development concurrently \"cd src && npm start\" \"wait-on http://localhost:3000 && electron .\"",
     "build": "cd src && npm run build",
     "package": "electron-builder",
-    "publish": "electron-builder --publish always"
+    "publish": "electron-builder --publish always",
+    "prod": "cross-env NODE_ENV=production npm start"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "electron": "^28.1.0",
     "electron-builder": "^24.9.1",
     "glob": "^10.3.10",
@@ -30,6 +32,9 @@
   },
   "dependencies": {
     "electron-updater": "^6.6.2",
+    "mysql2": "^3.6.5",
+    "react-draggable": "^4.4.6",
+    "sqlite3": "^5.1.7",
     "swiper": "^11.2.7"
   },
   "build": {
@@ -39,7 +44,7 @@
       "output": "dist"
     },
     "files": [
-      "build/**/*",
+      "src/build/**/*",
       "node_modules/**/*",
       "main.js"
     ],
@@ -47,14 +52,25 @@
       "target": "nsis"
     },
     "mac": {
-      "target": "dmg"
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.business",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "linux": {
       "target": "AppImage"
     },
     "publish": {
       "provider": "github",
-      "token": "il_tuo_token_github"
+      "owner": "danieleconte3d",
+      "repo": "EddyStyle",
+      "private": false,
+      "releaseType": "release"
     }
   }
 }

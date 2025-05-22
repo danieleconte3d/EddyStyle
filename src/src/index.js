@@ -5,6 +5,7 @@ import { store } from './store';
 import App from './App';
 import './index.css';
 
+// Inizializzazione dell'app
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
@@ -12,4 +13,9 @@ root.render(
       <App />
     </Provider>
   </React.StrictMode>
-); 
+);
+
+// Gestione degli errori globali
+window.addEventListener('error', (event) => {
+  console.error('Errore globale:', event.error);
+}); 

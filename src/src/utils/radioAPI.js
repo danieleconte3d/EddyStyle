@@ -6,14 +6,33 @@
 
 const APP_NAME = 'EddyStyle_RadioApp/1.0';
 
+// Flag per controllare se siamo in Electron
+const isElectron = () => {
+  return window && window.process && window.process.type;
+};
+
 /**
  * Ottiene una lista casuale di server API disponibili
  * @returns {Promise<string[]>} Lista di URL dei server
  */
 export const getRadioServers = async () => {
   try {
+    // In Electron, può essere necessario un timeout più lungo
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondi di timeout
+    
     // Simulazione del DNS lookup con una chiamata fetch
-    const response = await fetch('https://all.api.radio-browser.info/json/servers');
+    const response = await fetch('https://all.api.radio-browser.info/json/servers', {
+      signal: controller.signal,
+      headers: { 'User-Agent': APP_NAME }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Errore HTTP ${response.status}`);
+    }
+    
     const servers = await response.json();
     
     // Randomizza la lista dei server
@@ -40,17 +59,42 @@ class RadioBrowserAPI {
     this.servers = [];
     this.currentServerIndex = 0;
     this.initialized = false;
+    this.initPromise = null;
   }
 
   /**
    * Inizializza l'API ottenendo la lista dei server
    */
   async init() {
-    if (this.initialized) return;
+    // Se è già in corso un'inizializzazione, ritorna quella promise
+    if (this.initPromise) return this.initPromise;
     
-    this.servers = await getRadioServers();
-    this.initialized = true;
-    console.log('Radio Browser API inizializzata con i server:', this.servers);
+    // Se è già inizializzato, ritorna subito
+    if (this.initialized) return Promise.resolve();
+    
+    // Crea una nuova promise di inizializzazione
+    this.initPromise = new Promise(async (resolve, reject) => {
+      try {
+        console.log('Inizializzazione Radio Browser API...');
+        this.servers = await getRadioServers();
+        this.initialized = true;
+        console.log('Radio Browser API inizializzata con i server:', this.servers);
+        resolve();
+      } catch (error) {
+        console.error('Fallimento nell\'inizializzazione di Radio Browser API:', error);
+        // Imposta comunque i server di fallback
+        this.servers = [
+          'https://de1.api.radio-browser.info',
+          'https://fr1.api.radio-browser.info'
+        ];
+        this.initialized = true; // Consideriamolo inizializzato anche se con server di fallback
+        resolve(); // Risolvi comunque la promise per non bloccare l'app
+      } finally {
+        this.initPromise = null;
+      }
+    });
+    
+    return this.initPromise;
   }
 
   /**
@@ -76,7 +120,17 @@ class RadioBrowserAPI {
    * @returns {Promise<Object>} Dati della risposta
    */
   async apiCall(endpoint, options = {}) {
-    await this.init();
+    // Assicurati che l'API sia inizializzata
+    try {
+      await this.init();
+    } catch (error) {
+      console.error('Fallimento nell\'inizializzazione dell\'API:', error);
+      throw error; // Non continuare se non possiamo inizializzare
+    }
+    
+    if (this.servers.length === 0) {
+      throw new Error('Nessun server API disponibile');
+    }
     
     const headers = {
       'User-Agent': APP_NAME,
@@ -84,12 +138,24 @@ class RadioBrowserAPI {
       ...options.headers
     };
     
+    // Aggiungi timeout per evitare richieste bloccanti
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 secondi di timeout
+    
     // Prova con ogni server fino a quando uno ha successo
     let lastError = null;
     for (let attempt = 0; attempt < this.servers.length; attempt++) {
       try {
         const url = `${this.getCurrentServerUrl()}${endpoint}`;
-        const response = await fetch(url, { ...options, headers });
+        console.log(`Tentativo ${attempt+1}/${this.servers.length} per ${url}`);
+        
+        const response = await fetch(url, { 
+          ...options, 
+          headers,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId); // Pulisci il timeout
         
         if (!response.ok) {
           throw new Error(`Errore HTTP ${response.status}`);
