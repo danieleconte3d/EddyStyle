@@ -181,7 +181,7 @@ class RadioBrowserAPI {
    * @returns {Promise<Array>} Lista di radio
    */
   async searchRadios(query, limit = 20, offset = 0) {
-    return this.apiCall(`/json/stations/search?name=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`);
+    return this.apiCall(`/json/stations/search?name=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}&order=votes&reverse=true`);
   }
 
   /**

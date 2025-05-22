@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, Profiler } from 'react';
+import React, { useState, useRef, useEffect, useMemo, Profiler, useCallback } from 'react';
 import { Box, IconButton, Typography, useTheme, Snackbar, Alert, TextField, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
@@ -97,22 +97,35 @@ function RadioCarousel({ onRadioChange }) {
 
   // Carica le radio popolari all'avvio con paginazione
   useEffect(() => {
-    const loadPopularRadios = async () => {
+    const loadInitialRadios = async () => {
       try {
         setIsLoading(true);
-        const data = await RadioBrowserAPI.getPopularRadios(30); // Carichiamo 30 elementi inizialmente
-        const formattedRadios = formatRadioData(data);
-        setPopularRadios(formattedRadios);
+        // Carica prima le radio preferite
+        const favorites = RadioStorage.getFavorites();
+        // Poi carica le radio recenti, escludendo quelle già nei preferiti
+        const history = RadioStorage.getHistory().filter(radio => 
+          !favorites.some(fav => fav.id === radio.id)
+        );
+        // Infine carica le radio popolari, escludendo quelle già nei preferiti o recenti
+        const popularData = await RadioBrowserAPI.getPopularRadios(30);
+        const formattedPopularRadios = formatRadioData(popularData).filter(radio => 
+          !favorites.some(fav => fav.id === radio.id) && 
+          !history.some(hist => hist.id === radio.id)
+        );
+        
+        // Combina le radio in ordine: preferite, recenti, popolari
+        const combinedRadios = [...favorites, ...history, ...formattedPopularRadios];
+        setPopularRadios(combinedRadios);
         setSearchResults([]);
       } catch (error) {
-        console.error('Errore nel caricamento delle radio popolari:', error);
-        setError('Errore nel caricamento delle radio popolari. Riprova più tardi.');
+        console.error('Errore nel caricamento delle radio:', error);
+        setError('Errore nel caricamento delle radio. Riprova più tardi.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadPopularRadios();
+    loadInitialRadios();
   }, []);
   
   // Formatta i dati delle radio in un formato coerente
@@ -230,6 +243,11 @@ function RadioCarousel({ onRadioChange }) {
     }
   };
 
+  // Ottimizzazione del rendering con useMemo per le radio
+  const displayRadios = useMemo(() => {
+    return getDisplayRadios();
+  }, [currentView, popularRadios, searchResults, searchQuery]);
+
   // Funzione per caricare più radio
   const loadMoreRadios = async () => {
     if (isLoadingMore) return;
@@ -258,10 +276,125 @@ function RadioCarousel({ onRadioChange }) {
     }
   };
 
-  // Ottimizzazione del rendering con useMemo
-  const displayRadios = useMemo(() => {
-    return getDisplayRadios();
-  }, [currentView, popularRadios, searchResults, searchQuery]);
+  // Ottimizzazione scroll handler con throttling
+  const handleScroll = useMemo(() => {
+    let lastCall = 0;
+    const throttleInterval = 16; // circa 60fps
+    let scrollTimeout;
+
+    return (swiper) => {
+      const now = window.performance.now();
+      
+      if (now - lastCall >= throttleInterval) {
+        performanceData.current.scrollEvents++;
+        setIsScrolling(true);
+        setCurrentIndex(swiper.activeIndex);
+
+        // Carica più radio solo quando siamo vicini alla fine e non stiamo già caricando
+        if (!isLoadingMore && swiper.activeIndex + 5 >= displayRadios.length) {
+          performanceData.current.loadEvents++;
+          loadMoreRadios();
+        }
+
+        lastCall = now;
+      }
+
+      // Debounce dello stato di scroll con timeout più lungo
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        setIsScrolling(false);
+      }, 300);
+    };
+  }, [displayRadios.length, isLoadingMore, loadMoreRadios]);
+
+  // Ottimizzazione del rendering dei singoli elementi del carosello
+  const renderRadioSlide = useCallback((radio) => (
+    <SwiperSlide
+      key={radio.id}
+      style={{
+        width: '300px',
+        height: 'auto',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        cursor: isScrolling ? 'grabbing' : 'pointer',
+        transform: 'translate3d(0,0,0)',
+        backfaceVisibility: 'hidden',
+        perspective: 1000,
+        WebkitFontSmoothing: 'antialiased',
+        WebkitTransform: 'translate3d(0,0,0)',
+        willChange: 'transform',
+        transformStyle: 'preserve-3d',
+        transition: isScrolling ? 'none' : 'all 0.2s ease',
+        '&:hover': {
+          transform: isScrolling ? 'none' : 'scale(1.05)'
+        }
+      }}
+    >
+      <Box 
+        sx={{ 
+          position: 'relative',
+          userSelect: 'none',
+          transform: 'translate3d(0,0,0)',
+          backfaceVisibility: 'hidden',
+          perspective: 1000,
+          WebkitFontSmoothing: 'antialiased',
+          WebkitTransform: 'translate3d(0,0,0)',
+          willChange: 'transform',
+          transformStyle: 'preserve-3d',
+          transition: isScrolling ? 'none' : 'all 0.2s ease',
+          '&:hover': {
+            transform: isScrolling ? 'none' : 'scale(1.05)'
+          }
+        }}
+      >
+        <RadioItem
+          radio={radio}
+          isPlaying={currentRadio?.id === radio.id && isPlaying}
+          onRadioClick={handleRadioClick}
+          onTextOverflow={handleTextOverflow}
+          isScrolling={isScrolling}
+        />
+        <IconButton
+          onClick={(e) => handleToggleFavorite(e, radio)}
+          sx={{
+            position: 'absolute',
+            bottom: 380,
+            left: 300,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: '12px',
+            zIndex: 10,
+            cursor: isScrolling ? 'grabbing' : 'pointer',
+            '&:hover': { 
+              backgroundColor: isScrolling ? 'rgba(0, 0, 0, 0.8)' : 'rgba(0, 0, 0, 0.5)',
+              transform: isScrolling ? 'none' : 'scale(1.1)'
+            },
+            transition: isScrolling ? 'none' : 'all 0.2s ease'
+          }}
+        >
+          {RadioStorage.isFavorite(radio.id) ? (
+            <FavoriteIcon sx={{ 
+              color: '#ff6b6b',
+              fontSize: '28px',
+              transition: isScrolling ? 'none' : 'transform 0.2s ease',
+              '&:hover': {
+                transform: isScrolling ? 'none' : 'scale(1.1)'
+              }
+            }} />
+          ) : (
+            <FavoriteBorderIcon sx={{ 
+              color: 'white',
+              fontSize: '28px',
+              transition: isScrolling ? 'none' : 'transform 0.2s ease',
+              '&:hover': {
+                transform: isScrolling ? 'none' : 'scale(1.1)'
+              }
+            }} />
+          )}
+        </IconButton>
+      </Box>
+    </SwiperSlide>
+  ), [currentRadio, isPlaying, isScrolling, handleRadioClick, handleTextOverflow, handleToggleFavorite]);
 
   // Performance monitoring
   useEffect(() => {
@@ -310,36 +443,6 @@ function RadioCarousel({ onRadioChange }) {
       window.cancelAnimationFrame(frameRef.current);
     };
   }, []);
-
-  // Ottimizzazione scroll handler con throttling
-  const handleScroll = useMemo(() => {
-    let lastCall = 0;
-    const throttleInterval = 16; // circa 60fps
-
-    return (swiper) => {
-      const now = window.performance.now();
-      
-      if (now - lastCall >= throttleInterval) {
-        performanceData.current.scrollEvents++;
-        setIsScrolling(true);
-        setCurrentIndex(swiper.activeIndex);
-
-        // Carica più radio quando ci avviciniamo alla fine
-        if (swiper.activeIndex + 5 >= displayRadios.length) {
-          performanceData.current.loadEvents++;
-          loadMoreRadios();
-        }
-
-        lastCall = now;
-      }
-
-      // Debounce dello stato di scroll
-      clearTimeout(swiper.scrollTimeout);
-      swiper.scrollTimeout = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
-    };
-  }, [displayRadios.length]);
 
   return (
     <Profiler id="RadioCarousel" onRender={onRenderCallback}>
@@ -419,95 +522,23 @@ function RadioCarousel({ onRadioChange }) {
             centeredSlides={true}
             onSlideChange={handleScroll}
             onTouchStart={() => {
-              setIsScrolling(false);
+              setIsScrolling(true);
               performanceData.current.scrollEvents = 0;
             }}
             onTouchEnd={() => {
               setTimeout(() => {
                 setIsScrolling(false);
-              }, 150);
+              }, 300);
             }}
             style={{
               width: '100%',
               height: '100%',
-              padding: '0 20px'
+              padding: '0 20px',
+              willChange: 'transform',
+              transformStyle: 'preserve-3d'
             }}
           >
-            {displayRadios.map((radio) => (
-              <SwiperSlide
-                key={radio.id}
-                style={{
-                  width: '300px',
-                  height: 'auto',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  cursor: isScrolling ? 'grabbing' : 'pointer',
-                  transform: 'translate3d(0,0,0)',
-                  backfaceVisibility: 'hidden',
-                  perspective: 1000,
-                  WebkitFontSmoothing: 'antialiased',
-                  WebkitTransform: 'translate3d(0,0,0)'
-                }}
-              >
-                <Box 
-                  sx={{ 
-                    position: 'relative',
-                    userSelect: 'none',
-                    transform: 'translate3d(0,0,0)',
-                    backfaceVisibility: 'hidden',
-                    perspective: 1000,
-                    WebkitFontSmoothing: 'antialiased',
-                    WebkitTransform: 'translate3d(0,0,0)'
-                  }}
-                >
-                  <RadioItem
-                    radio={radio}
-                    isPlaying={currentRadio?.id === radio.id && isPlaying}
-                    onRadioClick={handleRadioClick}
-                    onTextOverflow={handleTextOverflow}
-                    isScrolling={scrollingTexts[radio.id]}
-                  />
-                  <IconButton
-                    onClick={(e) => handleToggleFavorite(e, radio)}
-                    sx={{
-                      position: 'absolute',
-                      bottom: 380,
-                      left: 300,
-                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                      padding: '12px',
-                      zIndex: 10,
-                      cursor: isScrolling ? 'grabbing' : 'pointer',
-                      '&:hover': { 
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        transform: isScrolling ? 'none' : 'scale(1.1)'
-                      },
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {RadioStorage.isFavorite(radio.id) ? (
-                      <FavoriteIcon sx={{ 
-                        color: '#ff6b6b',
-                        fontSize: '28px',
-                        transition: 'transform 0.2s ease',
-                        '&:hover': {
-                          transform: isScrolling ? 'none' : 'scale(1.1)'
-                        }
-                      }} />
-                    ) : (
-                      <FavoriteBorderIcon sx={{ 
-                        color: 'white',
-                        fontSize: '28px',
-                        transition: 'transform 0.2s ease',
-                        '&:hover': {
-                          transform: isScrolling ? 'none' : 'scale(1.1)'
-                        }
-                      }} />
-                    )}
-                  </IconButton>
-                </Box>
-              </SwiperSlide>
-            ))}
+            {displayRadios.map(renderRadioSlide)}
           </Swiper>
         </Box>
 
