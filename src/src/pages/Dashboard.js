@@ -5,7 +5,7 @@ import RadioIcon from '@mui/icons-material/Radio';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import PeopleIcon from '@mui/icons-material/People';
-import WindowControls from '../components/WindowControls';
+import TopBar from '../components/TopBar';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -49,7 +49,8 @@ function Dashboard() {
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      <WindowControls />
+      <TopBar title="Eddy Style" showBack={false} />
+      
       <Box sx={{ 
         flexGrow: 1, 
         display: 'flex', 
@@ -57,7 +58,8 @@ function Dashboard() {
         justifyContent: 'center', 
         alignItems: 'center',
         px: 2,
-        py: 4 
+        py: 4,
+        mt: 2
       }}>
         <Typography 
           variant="h2" 

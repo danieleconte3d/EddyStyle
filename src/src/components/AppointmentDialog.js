@@ -35,12 +35,16 @@ function AppointmentDialog({
   // Aggiorna il form quando cambia l'appuntamento
   React.useEffect(() => {
     if (appointment) {
+      const duration = Math.round((new Date(appointment.endTime) - new Date(appointment.startTime)) / (1000 * 60));
+      // Assicurati che la durata sia uno dei valori validi
+      const validDuration = [30, 60, 90, 120, 150, 180].includes(duration) ? duration : 60;
+      
       setFormData({
-        title: appointment.title,
-        client: appointment.client,
-        stylistId: appointment.stylistId,
+        title: appointment.title || '',
+        client: appointment.client || '',
+        stylistId: appointment.personale_id || '',
         notes: appointment.notes || '',
-        duration: Math.round((appointment.endTime - appointment.startTime) / (1000 * 60))
+        duration: validDuration
       });
     } else {
       setFormData({

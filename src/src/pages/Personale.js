@@ -21,16 +21,20 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WindowControls from '../components/WindowControls';
 import MiniPlayer from '../components/MiniPlayer';
+import ColorPicker from '../components/ColorPicker';
+import TopBar from '../components/TopBar';
+import EditIcon from '@mui/icons-material/Edit';
 
 function Personale() {
   const navigate = useNavigate();
   const [personale, setPersonale] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedPersonale, setSelectedPersonale] = useState(null);
   const [formData, setFormData] = useState({
     nome: '',
-    colore: '#000000',
+    colore: '#1976d2',
     telefono: ''
   });
 
@@ -61,7 +65,7 @@ function Personale() {
       setSelectedPersonale(null);
       setFormData({
         nome: '',
-        colore: '#000000',
+        colore: '#1976d2',
         telefono: ''
       });
     }
@@ -73,7 +77,7 @@ function Personale() {
     setSelectedPersonale(null);
     setFormData({
       nome: '',
-      colore: '#000000',
+      colore: '#1976d2',
       telefono: ''
     });
   };
@@ -92,144 +96,144 @@ function Personale() {
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteClick = (personale) => {
+    setSelectedPersonale(personale);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
     if (!selectedPersonale) return;
     
     try {
       await window.electron.database.deletePersonale(selectedPersonale.id);
-      handleCloseDialog();
+      setOpenDeleteDialog(false);
+      setSelectedPersonale(null);
       loadPersonale();
     } catch (error) {
       console.error('Errore nell\'eliminazione del personale:', error);
     }
   };
 
-  return (
-    <Container maxWidth={false} disableGutters sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        p: 2, 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
-      }}>
-        <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          Personale
-        </Typography>
-        <MiniPlayer />
-        <WindowControls />
-      </Box>
+  const handleDeleteCancel = () => {
+    setOpenDeleteDialog(false);
+    setSelectedPersonale(null);
+  };
 
-      {/* Contenuto principale */}
-      <Box sx={{ flexGrow: 1, p: 3, overflow: 'auto' }}>
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <Grid container spacing={3}>
-            {personale.map((p) => (
-              <Grid item xs={12} sm={6} md={4} key={p.id}>
-                <Card 
-                  sx={{ 
-                    cursor: 'pointer',
-                    '&:hover': { opacity: 0.8 }
-                  }}
-                  onClick={() => handleOpenDialog(p)}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: '50%',
-                          backgroundColor: p.colore,
-                          mr: 2
-                        }}
-                      />
-                      <Typography variant="h6">{p.nome}</Typography>
-                    </Box>
-                    {p.telefono && (
-                      <Typography color="text.secondary">
-                        Tel: {p.telefono}
-                      </Typography>
-                    )}
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-            <Grid item xs={12} sm={6} md={4}>
-              <Card 
-                sx={{ 
-                  cursor: 'pointer',
-                  '&:hover': { opacity: 0.8 },
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                onClick={() => handleOpenDialog()}
-              >
+  return (
+    <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <TopBar title="Gestione Personale" />
+
+      <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+          <Button 
+            variant="contained" 
+            onClick={() => {
+              setSelectedPersonale(null);
+              setFormData({ nome: '', colore: '#1976d2', telefono: '' });
+              setOpenDialog(true);
+            }}
+          >
+            Aggiungi Personale
+          </Button>
+        </Box>
+
+        <Grid container spacing={3}>
+          {personale.map((p) => (
+            <Grid item xs={12} sm={6} md={4} key={p.id}>
+              <Card sx={{ 
+                backgroundColor: p.colore,
+                color: 'white',
+                position: 'relative'
+              }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <AddIcon sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography>Aggiungi Personale</Typography>
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: 8, 
+                    right: 8, 
+                    display: 'flex', 
+                    gap: 1 
+                  }}>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleOpenDialog(p)}
+                      sx={{ color: 'white' }}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton 
+                      size="small" 
+                      onClick={() => handleDeleteClick(p)}
+                      sx={{ color: 'white' }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
                   </Box>
+                  <Typography variant="h5" component="div" sx={{ mb: 1 }}>
+                    {p.nome}
+                  </Typography>
+                  {p.telefono && (
+                    <Typography variant="body2">
+                      Tel: {p.telefono}
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
-          </Grid>
-        )}
+          ))}
+        </Grid>
       </Box>
 
-      {/* Dialog per aggiungere/modificare personale */}
       <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <DialogTitle>
           {selectedPersonale ? 'Modifica Personale' : 'Nuovo Personale'}
         </DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ mt: 2 }}>
             <TextField
+              fullWidth
               label="Nome"
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              fullWidth
+              sx={{ mb: 2 }}
             />
             <TextField
-              label="Colore"
-              type="color"
-              value={formData.colore}
-              onChange={(e) => setFormData({ ...formData, colore: e.target.value })}
               fullWidth
-              InputProps={{
-                style: { height: '56px' }
-              }}
-            />
-            <TextField
               label="Telefono"
               value={formData.telefono}
               onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-              fullWidth
+              sx={{ mb: 2 }}
+            />
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>
+              Colore
+            </Typography>
+            <ColorPicker
+              color={formData.colore}
+              onChange={(color) => setFormData({ ...formData, colore: color.hex })}
             />
           </Box>
         </DialogContent>
         <DialogActions>
-          {selectedPersonale && (
-            <Button
-              color="error"
-              startIcon={<DeleteIcon />}
-              onClick={handleDelete}
-            >
-              Elimina
-            </Button>
-          )}
           <Button onClick={handleCloseDialog}>Annulla</Button>
           <Button onClick={handleSubmit} variant="contained">
-            {selectedPersonale ? 'Salva' : 'Aggiungi'}
+            Salva
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={openDeleteDialog} onClose={handleDeleteCancel}>
+        <DialogTitle>Conferma Eliminazione</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Sei sicuro di voler eliminare {selectedPersonale?.nome}?
+            Questa azione non può essere annullata.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDeleteCancel} color="inherit">
+            Annulla
+          </Button>
+          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+            Elimina
           </Button>
         </DialogActions>
       </Dialog>

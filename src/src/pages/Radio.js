@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { Box, Typography, Container, IconButton } from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
 import RadioCarousel from '../components/RadioCarousel';
-import WindowControls from '../components/WindowControls';
 import { styled } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import TopBar from '../components/TopBar';
 
 const NowPlayingContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
-  height: '200px',
+  height: '180px',
   width: '100%',
-  marginBottom: theme.spacing(4),
+  marginBottom: theme.spacing(3),
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -65,40 +64,18 @@ function Radio() {
   };
 
   return (
-    <Container maxWidth="xl" sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <WindowControls />
+    <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <TopBar title="Radio" />
+
       <Box sx={{ 
+        flex: 1, 
         p: 3, 
-        flexGrow: 1, 
         display: 'flex', 
         flexDirection: 'column',
-        position: 'relative'
+        position: 'relative',
+        mt: 2,
+        overflow: 'hidden'
       }}>
-        <IconButton
-          onClick={() => navigate(-1)}
-          sx={{
-            position: 'absolute',
-            top: 25,
-            left: 0,
-            zIndex: 3,
-            color: 'white',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.2)'
-            }
-          }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
-
-        <Typography variant="h4" sx={{ 
-          mb: 4, 
-          color: 'primary.main',
-          pl: 6
-        }}>
-          Radio
-        </Typography>
-        
         <NowPlayingContainer className={currentRadio ? 'visible' : ''}>
           {currentRadio && (
             <>
@@ -122,7 +99,7 @@ function Radio() {
           )}
         </NowPlayingContainer>
 
-        <Box sx={{ flexGrow: 1 }}>
+        <Box sx={{ flex: 1, overflow: 'hidden' }}>
           <RadioCarousel onRadioChange={handleRadioChange} />
         </Box>
       </Box>

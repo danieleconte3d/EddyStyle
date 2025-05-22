@@ -33,6 +33,7 @@
   "dependencies": {
     "electron-updater": "^6.6.2",
     "mysql2": "^3.6.5",
+    "react-color": "^2.19.3",
     "react-draggable": "^4.4.6",
     "sqlite3": "^5.1.7",
     "swiper": "^11.2.7"

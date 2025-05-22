@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Box, Typography, Container, IconButton
+  Box, 
+  Container
 } from '@mui/material';
-import WindowControls from '../components/WindowControls';
 import WeekCalendar from '../components/WeekCalendar';
 import AppointmentDialog from '../components/AppointmentDialog';
-import { useNavigate } from 'react-router-dom';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import TopBar from '../components/TopBar';
 
 function Cliente() {
-  const navigate = useNavigate();
   const [appointments, setAppointments] = useState([]);
   const [stylists, setStylists] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
@@ -207,23 +205,7 @@ function Cliente() {
 
   return (
     <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        p: 2,
-        borderBottom: '1px solid rgba(255, 255, 255, 0.12)'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => navigate('/')} color="inherit">
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h6" component="h1">
-            Gestione Appuntamenti
-          </Typography>
-        </Box>
-        <WindowControls />
-      </Box>
+      <TopBar title="Gestione Appuntamenti" />
 
       <Box sx={{ flex: 1, overflow: 'hidden', p: 2 }}>
         <WeekCalendar

@@ -47,49 +47,8 @@ function initDatabase() {
     `, (err) => {
         if (err) {
             console.error('Errore nella creazione della tabella appointments:', err);
-        } else {
-            console.log('Tabella appointments creata con successo');
-            
-            // Inserisci un appuntamento di test
-            const testAppointment = {
-                nome: 'Cliente Test',
-                telefono: '1234567890',
-                email: 'test@example.com',
-                servizio: 'Taglio Capelli',
-                data_inizio: new Date().toISOString(),
-                durata: 60,
-                note: 'Appuntamento di test',
-                prezzo: 30,
-                stato: 'programmato',
-                metodo_pagamento: 'contanti',
-                personale_id: 1
-            };
-
-            db.run(`
-                INSERT INTO appointments (
-                    nome, telefono, email, servizio, data_inizio, durata, 
-                    note, prezzo, stato, metodo_pagamento, personale_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            `, [
-                testAppointment.nome,
-                testAppointment.telefono,
-                testAppointment.email,
-                testAppointment.servizio,
-                testAppointment.data_inizio,
-                testAppointment.durata,
-                testAppointment.note,
-                testAppointment.prezzo,
-                testAppointment.stato,
-                testAppointment.metodo_pagamento,
-                testAppointment.personale_id
-            ], function(err) {
-                if (err) {
-                    console.error('Errore nell\'inserimento dell\'appuntamento di test:', err);
-                } else {
-                    console.log('Appuntamento di test creato con ID:', this.lastID);
-                }
-            });
         }
+        console.log('Tabella appointments creata con successo');
     });
 
     // Inserimento dati di default per il personale se la tabella è vuota
@@ -191,7 +150,6 @@ function deletePersonale(id) {
 // Funzioni esistenti per gli appuntamenti
 function createAppointment(appointment) {
     return new Promise((resolve, reject) => {
-        console.log('Creazione appuntamento nel database:', appointment);
         const { nome, telefono, email, servizio, data_inizio, durata, note, prezzo, stato, metodo_pagamento, personale_id } = appointment;
         const sql = `
             INSERT INTO appointments (
@@ -199,8 +157,6 @@ function createAppointment(appointment) {
                 note, prezzo, stato, metodo_pagamento, personale_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `;
-        console.log('SQL query:', sql);
-        console.log('Parametri:', [nome, telefono, email, servizio, data_inizio, durata, note, prezzo, stato, metodo_pagamento, personale_id]);
         
         db.run(sql, [nome, telefono, email, servizio, data_inizio, durata, note, prezzo, stato, metodo_pagamento, personale_id], function(err) {
             if (err) {
@@ -208,7 +164,6 @@ function createAppointment(appointment) {
                 reject(err);
                 return;
             }
-            console.log('Appuntamento creato con ID:', this.lastID);
             resolve({ id: this.lastID, ...appointment });
         });
     });
@@ -348,8 +303,6 @@ function debugDatabase() {
                 return;
               }
               results.appointmentsWithPersonale = rows;
-              
-              console.log('Risultati debug database:', JSON.stringify(results, null, 2));
               resolve(results);
             });
           });
