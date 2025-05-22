@@ -6,6 +6,7 @@ import {
 import WeekCalendar from '../components/WeekCalendar';
 import AppointmentDialog from '../components/AppointmentDialog';
 import TopBar from '../components/TopBar';
+import StylistFilter from '../components/StylistFilter';
 
 function Cliente() {
   const [appointments, setAppointments] = useState([]);
@@ -14,6 +15,7 @@ function Cliente() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [editingAppointment, setEditingAppointment] = useState(null);
+  const [selectedStylistIds, setSelectedStylistIds] = useState([]);
 
   // Carica gli appuntamenti e il personale dal database
   useEffect(() => {
@@ -66,6 +68,11 @@ function Cliente() {
       console.error('Errore nel caricamento degli appuntamenti:', error);
     }
   };
+  
+  // Filtra gli appuntamenti in base ai dipendenti selezionati
+  const filteredAppointments = selectedStylistIds.length === 0 
+    ? appointments 
+    : appointments.filter(app => selectedStylistIds.includes(app.personale_id));
   
   // Gestisce apertura del dialog per nuovo appuntamento
   const handleOpenDialog = (date, time, appointment = null) => {
@@ -208,10 +215,15 @@ function Cliente() {
       <TopBar title="Gestione Appuntamenti" />
 
       <Box sx={{ flex: 1, overflow: 'hidden', p: 2 }}>
+        <StylistFilter 
+          stylists={stylists}
+          selectedStylistIds={selectedStylistIds}
+          onStylistSelect={setSelectedStylistIds}
+        />
         <WeekCalendar
           onDaySelect={setSelectedDate}
           onTimeSlotClick={(time, date) => handleOpenDialog(date, time)}
-          appointments={appointments}
+          appointments={filteredAppointments}
           onAppointmentClick={(appointment) => {
             const date = new Date(appointment.startTime);
             const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
