@@ -360,46 +360,71 @@ function WeekDay({
             slotHeight: SLOT_HEIGHT
           });
           return (
-            <AppointmentBox
+            <Tooltip
               key={appointment.id}
-              color={appointment.color}
-              style={{
-                top: `${appointment.position.top}px`,
-                height: `${appointment.position.height}px`,
-                left: `${appointment.position.left}px`,
-                width: `${appointment.position.width - (appointment.position.margin * 2)}px`,
-                margin: `0 ${appointment.position.margin}px`
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onAppointmentClick) {
-                  onAppointmentClick(appointment);
-                }
-              }}
+              title={
+                <Box sx={{ p: 1 }}>
+                  <Typography variant="subtitle2" sx={{ color: 'white', fontWeight: 'bold' }}>
+                    {appointment.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'white' }}>
+                    Cliente: {appointment.client}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'white' }}>
+                    Orario: {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
+                  </Typography>
+                  {appointment.notes && (
+                    <Typography variant="body2" sx={{ color: 'white', mt: 1 }}>
+                      Note: {appointment.notes}
+                    </Typography>
+                  )}
+                </Box>
+              }
+              arrow
+              placement="right"
+              enterDelay={200}
+              leaveDelay={200}
             >
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  fontWeight: 'bold', 
-                  fontSize: '0.7rem',
-                  color: 'white',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+              <AppointmentBox
+                color={appointment.color}
+                style={{
+                  top: `${appointment.position.top}px`,
+                  height: `${appointment.position.height}px`,
+                  left: `${appointment.position.left}px`,
+                  width: `${appointment.position.width - (appointment.position.margin * 2)}px`,
+                  margin: `0 ${appointment.position.margin}px`
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onAppointmentClick) {
+                    onAppointmentClick(appointment);
+                  }
                 }}
               >
-                {formatTime(appointment.startTime)} - {appointment.title}
-              </Typography>
-              <Typography 
-                variant="caption" 
-                sx={{ 
-                  display: 'block', 
-                  fontSize: '0.7rem',
-                  color: 'white',
-                  textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                {appointment.client}
-              </Typography>
-            </AppointmentBox>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    fontWeight: 'bold', 
+                    fontSize: '0.7rem',
+                    color: 'white',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  {formatTime(appointment.startTime)} - {appointment.title}
+                </Typography>
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    display: 'block', 
+                    fontSize: '0.7rem',
+                    color: 'white',
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  {appointment.client}
+                </Typography>
+              </AppointmentBox>
+            </Tooltip>
           );
         })}
       </TimeSlotsContainer>

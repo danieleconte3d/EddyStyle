@@ -5,10 +5,16 @@ import WeekNavigator from './WeekNavigator';
 import { format } from 'date-fns';
 import { startOfISOWeek, addDays } from 'date-fns';
 
-function WeekCalendar({ onDaySelect, onTimeSlotClick, appointments = [], onAppointmentClick }) {
+function WeekCalendar({ 
+  onDaySelect, 
+  onTimeSlotClick, 
+  appointments = [], 
+  onAppointmentClick,
+  currentWeek,
+  onWeekChange 
+}) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
-  const [currentWeek, setCurrentWeek] = useState(0);
 
   console.log('WeekCalendar - Appuntamenti ricevuti:', appointments);
 
@@ -96,7 +102,9 @@ function WeekCalendar({ onDaySelect, onTimeSlotClick, appointments = [], onAppoi
   };
 
   const handleWeekChange = (newWeek) => {
-    setCurrentWeek(newWeek);
+    if (onWeekChange) {
+      onWeekChange(newWeek);
+    }
   };
 
   const handleTimeSlotClick = (day, time) => {

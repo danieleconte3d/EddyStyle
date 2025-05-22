@@ -7,6 +7,7 @@ import WeekCalendar from '../components/WeekCalendar';
 import AppointmentDialog from '../components/AppointmentDialog';
 import TopBar from '../components/TopBar';
 import StylistFilter from '../components/StylistFilter';
+import { startOfWeek, endOfWeek, addWeeks } from 'date-fns';
 
 function Cliente() {
   const [appointments, setAppointments] = useState([]);
@@ -16,12 +17,12 @@ function Cliente() {
   const [selectedTime, setSelectedTime] = useState(null);
   const [editingAppointment, setEditingAppointment] = useState(null);
   const [selectedStylistIds, setSelectedStylistIds] = useState([]);
+  const [currentWeek, setCurrentWeek] = useState(0);
 
-  // Carica gli appuntamenti e il personale dal database
+  // Carica il personale dal database
   useEffect(() => {
-    const loadData = async () => {
+    const loadStylists = async () => {
       try {
-        // Carica il personale
         const personale = await window.electron.database.getAllPersonale();
         console.log('Personale caricato:', personale);
         setStylists(personale.map(p => ({
@@ -29,26 +30,42 @@ function Cliente() {
           name: p.nome,
           color: p.colore
         })));
-
-        // Carica gli appuntamenti
-        await loadAppointments();
       } catch (error) {
-        console.error('Errore nel caricamento dei dati:', error);
+        console.error('Errore nel caricamento del personale:', error);
       }
     };
 
-    loadData();
+    loadStylists();
   }, []);
+
+  // Carica gli appuntamenti quando cambia la settimana
+  useEffect(() => {
+    loadAppointments();
+  }, [currentWeek]);
 
   const loadAppointments = async () => {
     try {
-      const appointments = await window.electron.database.getAllAppointments();
+      // Calcola l'inizio e la fine della settimana corrente
+      const today = new Date();
+      const weekStart = startOfWeek(addWeeks(today, currentWeek), { weekStartsOn: 1 }); // Inizia dal lunedì
+      const weekEnd = endOfWeek(addWeeks(today, currentWeek), { weekStartsOn: 1 });
+
+      console.log('Caricamento appuntamenti per la settimana:', {
+        inizio: weekStart.toISOString(),
+        fine: weekEnd.toISOString()
+      });
+
+      const appointments = await window.electron.database.getAppointmentsByDateRange(
+        weekStart.toISOString(),
+        weekEnd.toISOString()
+      );
+      
       console.log('Appuntamenti caricati dal database:', appointments);
       
       // Trasforma gli appuntamenti nel formato richiesto dal componente WeekDay
       const transformedAppointments = appointments.map(appointment => {
         const startTime = new Date(appointment.data_inizio);
-        const endTime = new Date(startTime.getTime() + appointment.durata * 60000); // Converti durata in millisecondi
+        const endTime = new Date(startTime.getTime() + appointment.durata * 60000);
         
         return {
           id: appointment.id,
@@ -57,7 +74,7 @@ function Cliente() {
           startTime: startTime.toISOString(),
           endTime: endTime.toISOString(),
           notes: appointment.note,
-          color: appointment.personale_colore || '#FF5722', // Usa il colore del personale o un colore di default
+          color: appointment.personale_colore || '#FF5722',
           personale_id: appointment.personale_id
         };
       });
@@ -68,12 +85,17 @@ function Cliente() {
       console.error('Errore nel caricamento degli appuntamenti:', error);
     }
   };
-  
+
   // Filtra gli appuntamenti in base ai dipendenti selezionati
   const filteredAppointments = selectedStylistIds.length === 0 
     ? appointments 
     : appointments.filter(app => selectedStylistIds.includes(app.personale_id));
-  
+
+  // Gestisce il cambio di settimana
+  const handleWeekChange = (newWeek) => {
+    setCurrentWeek(newWeek);
+  };
+
   // Gestisce apertura del dialog per nuovo appuntamento
   const handleOpenDialog = (date, time, appointment = null) => {
     console.log('Apertura dialog con:', { date, time, appointment });
@@ -210,6 +232,17 @@ function Cliente() {
     }
   };
 
+  // Gestisce l'eliminazione di un appuntamento
+  const handleDeleteAppointment = async (appointmentId) => {
+    try {
+      await window.electron.database.deleteAppointment(appointmentId);
+      await loadAppointments();
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Errore durante l\'eliminazione dell\'appuntamento:', error);
+    }
+  };
+
   return (
     <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar title="Gestione Appuntamenti" />
@@ -229,6 +262,8 @@ function Cliente() {
             const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
             handleOpenDialog(date, time, appointment);
           }}
+          currentWeek={currentWeek}
+          onWeekChange={handleWeekChange}
         />
       </Box>
 
@@ -236,6 +271,7 @@ function Cliente() {
         open={openDialog}
         onClose={handleCloseDialog}
         onSave={handleSaveAppointment}
+        onDelete={handleDeleteAppointment}
         appointment={editingAppointment}
         selectedDate={selectedDate}
         selectedTime={selectedTime}
