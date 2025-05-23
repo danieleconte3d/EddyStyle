@@ -3,6 +3,7 @@ import { Box, IconButton, Typography } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import RadioIcon from '@mui/icons-material/Radio';
+import { memo } from 'react';
 
 const ScrollingText = styled(Typography)(({ theme }) => ({
   width: '100%',
@@ -56,7 +57,7 @@ const placeholderIconStyle = {
   padding: '40px'
 };
 
-const RadioItem = ({ radio, isPlaying, onRadioClick, onTextOverflow, isScrolling }) => {
+const RadioItemComponent = ({ radio, isPlaying, onRadioClick, onTextOverflow, isScrolling }) => {
   const [failedImage, setFailedImage] = useState(false);
 
   const handleImageError = () => {
@@ -159,4 +160,12 @@ const RadioItem = ({ radio, isPlaying, onRadioClick, onTextOverflow, isScrolling
   );
 };
 
-export default RadioItem;
+const areEqual = (prev, next) => {
+  // Evita re-render se l'unica differenza è lo scrolling
+  return (
+    prev.radio.id === next.radio.id &&
+    prev.isPlaying === next.isPlaying
+  );
+};
+
+export default memo(RadioItemComponent, areEqual);

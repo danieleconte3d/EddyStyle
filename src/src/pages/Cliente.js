@@ -8,6 +8,7 @@ import AppointmentDialog from '../components/AppointmentDialog';
 import TopBar from '../components/TopBar';
 import StylistFilter from '../components/StylistFilter';
 import { startOfWeek, endOfWeek, addWeeks } from 'date-fns';
+import { appointmentsService, personaleService, initializeDefaultPersonale } from '../services/firebaseService';
 
 function Cliente() {
   const [appointments, setAppointments] = useState([]);
@@ -23,7 +24,10 @@ function Cliente() {
   useEffect(() => {
     const loadStylists = async () => {
       try {
-        const personale = await window.electron.database.getAllPersonale();
+        // Inizializza il personale di default se necessario
+        await initializeDefaultPersonale();
+        
+        const personale = await personaleService.getAllPersonale();
         console.log('Personale caricato:', personale);
         setStylists(personale.map(p => ({
           id: p.id,
@@ -45,27 +49,18 @@ function Cliente() {
 
   const loadAppointments = async () => {
     try {
-      // Calcola l'inizio e la fine della settimana corrente
-      const today = new Date();
-      const weekStart = startOfWeek(addWeeks(today, currentWeek), { weekStartsOn: 1 }); // Inizia dal lunedì
-      const weekEnd = endOfWeek(addWeeks(today, currentWeek), { weekStartsOn: 1 });
-
-      console.log('Caricamento appuntamenti per la settimana:', {
-        inizio: weekStart.toISOString(),
-        fine: weekEnd.toISOString()
-      });
-
-      const appointments = await window.electron.database.getAppointmentsByDateRange(
-        weekStart.toISOString(),
-        weekEnd.toISOString()
-      );
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
       
-      console.log('Appuntamenti caricati dal database:', appointments);
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30); // Carica appuntamenti per i prossimi 30 giorni
       
-      // Trasforma gli appuntamenti nel formato richiesto dal componente WeekDay
+      const appointments = await appointmentsService.getAppointmentsByDateRange(startDate, endDate);
+      
+      // Trasforma gli appuntamenti nel formato richiesto dal calendario
       const transformedAppointments = appointments.map(appointment => {
-        const startTime = new Date(appointment.data_inizio);
-        const endTime = new Date(startTime.getTime() + appointment.durata * 60000);
+        const startTime = new Date(appointment.data_inizio.toDate()); // Converti Timestamp in Date
+        const endTime = new Date(startTime.getTime() + appointment.durata * 60000); // Aggiungi la durata in millisecondi
         
         return {
           id: appointment.id,
@@ -170,12 +165,12 @@ function Cliente() {
 
       if (editingAppointment) {
         console.log('Aggiornamento appuntamento esistente:', editingAppointment.id);
-        const result = await window.electron.database.updateAppointment(editingAppointment.id, appointmentData);
-        console.log('Risultato aggiornamento:', result);
+        await appointmentsService.updateAppointment(editingAppointment.id, appointmentData);
+        console.log('Appuntamento aggiornato con successo');
       } else {
         console.log('Creazione nuovo appuntamento');
-        const result = await window.electron.database.createAppointment(appointmentData);
-        console.log('Risultato creazione:', result);
+        const result = await appointmentsService.createAppointment(appointmentData);
+        console.log('Appuntamento creato con successo:', result);
       }
 
       // Ricarica gli appuntamenti dal database
@@ -223,7 +218,7 @@ function Cliente() {
         metodo_pagamento: ''
       };
 
-      await window.electron.database.updateAppointment(appointment.id, appointmentData);
+      await appointmentsService.updateAppointment(appointment.id, appointmentData);
       
       // Ricarica gli appuntamenti dal database
       await loadAppointments();
@@ -235,7 +230,7 @@ function Cliente() {
   // Gestisce l'eliminazione di un appuntamento
   const handleDeleteAppointment = async (appointmentId) => {
     try {
-      await window.electron.database.deleteAppointment(appointmentId);
+      await appointmentsService.deleteAppointment(appointmentId);
       await loadAppointments();
       handleCloseDialog();
     } catch (error) {
@@ -244,27 +239,41 @@ function Cliente() {
   };
 
   return (
-    <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Container maxWidth={false} disableGutters sx={{ 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'column',
+      overflow: 'hidden' // Importante per evitare scroll indesiderati
+    }}>
       <TopBar title="Gestione Appuntamenti" />
 
-      <Box sx={{ flex: 1, overflow: 'hidden', p: 2 }}>
+      <Box sx={{ 
+        flex: 1, 
+        overflow: 'hidden', 
+        p: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2
+      }}>
         <StylistFilter 
           stylists={stylists}
           selectedStylistIds={selectedStylistIds}
           onStylistSelect={setSelectedStylistIds}
         />
-        <WeekCalendar
-          onDaySelect={setSelectedDate}
-          onTimeSlotClick={(time, date) => handleOpenDialog(date, time)}
-          appointments={filteredAppointments}
-          onAppointmentClick={(appointment) => {
-            const date = new Date(appointment.startTime);
-            const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-            handleOpenDialog(date, time, appointment);
-          }}
-          currentWeek={currentWeek}
-          onWeekChange={handleWeekChange}
-        />
+        <Box sx={{ flex: 1, minHeight: 0 }}>
+          <WeekCalendar
+            onDaySelect={setSelectedDate}
+            onTimeSlotClick={(time, date) => handleOpenDialog(date, time)}
+            appointments={filteredAppointments}
+            onAppointmentClick={(appointment) => {
+              const date = new Date(appointment.startTime);
+              const time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+              handleOpenDialog(date, time, appointment);
+            }}
+            currentWeek={currentWeek}
+            onWeekChange={handleWeekChange}
+          />
+        </Box>
       </Box>
 
       <AppointmentDialog

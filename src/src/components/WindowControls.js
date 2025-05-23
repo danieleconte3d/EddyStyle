@@ -8,30 +8,21 @@ const isElectron = () => {
   return window && window.process && window.process.type === 'renderer';
 };
 
-// Ottieni ipcRenderer solo se siamo in Electron
-let ipcRenderer = null;
-if (isElectron()) {
-  try {
-    ipcRenderer = window.require('electron').ipcRenderer;
-  } catch (error) {
-    console.error('Errore durante il caricamento di electron:', error);
-  }
-}
-
 function WindowControls() {
+  // Se non siamo in Electron, non mostrare i controlli
+  if (!isElectron()) {
+    return null;
+  }
+
   const handleMinimize = () => {
-    if (ipcRenderer) {
-      ipcRenderer.send('minimize-window');
-    } else {
-      console.log('Minimize non disponibile (non in Electron)');
+    if (window.electron && window.electron.minimize) {
+      window.electron.minimize();
     }
   };
 
   const handleClose = () => {
-    if (ipcRenderer) {
-      ipcRenderer.send('close-window');
-    } else {
-      console.log('Close non disponibile (non in Electron)');
+    if (window.electron && window.electron.close) {
+      window.electron.close();
     }
   };
 

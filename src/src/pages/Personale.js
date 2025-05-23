@@ -24,6 +24,7 @@ import MiniPlayer from '../components/MiniPlayer';
 import ColorPicker from '../components/ColorPicker';
 import TopBar from '../components/TopBar';
 import EditIcon from '@mui/icons-material/Edit';
+import { personaleService } from '../services/firebaseService';
 
 function Personale() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ function Personale() {
 
   const loadPersonale = async () => {
     try {
-      const data = await window.electron.database.getAllPersonale();
+      const data = await personaleService.getAllPersonale();
       setPersonale(data);
     } catch (error) {
       console.error('Errore nel caricamento del personale:', error);
@@ -85,9 +86,9 @@ function Personale() {
   const handleSubmit = async () => {
     try {
       if (selectedPersonale) {
-        await window.electron.database.updatePersonale(selectedPersonale.id, formData);
+        await personaleService.updatePersonale(selectedPersonale.id, formData);
       } else {
-        await window.electron.database.createPersonale(formData);
+        await personaleService.createPersonale(formData);
       }
       handleCloseDialog();
       loadPersonale();
@@ -105,7 +106,7 @@ function Personale() {
     if (!selectedPersonale) return;
     
     try {
-      await window.electron.database.deletePersonale(selectedPersonale.id);
+      await personaleService.deletePersonale(selectedPersonale.id);
       setOpenDeleteDialog(false);
       setSelectedPersonale(null);
       loadPersonale();
@@ -119,6 +120,17 @@ function Personale() {
     setSelectedPersonale(null);
   };
 
+  if (loading) {
+    return (
+      <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <TopBar title="Gestione Personale" />
+        <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar title="Gestione Personale" />
@@ -127,11 +139,7 @@ function Personale() {
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
           <Button 
             variant="contained" 
-            onClick={() => {
-              setSelectedPersonale(null);
-              setFormData({ nome: '', colore: '#1976d2', telefono: '' });
-              setOpenDialog(true);
-            }}
+            onClick={() => handleOpenDialog()}
           >
             Aggiungi Personale
           </Button>
@@ -183,7 +191,7 @@ function Personale() {
         </Grid>
       </Box>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>
           {selectedPersonale ? 'Modifica Personale' : 'Nuovo Personale'}
         </DialogTitle>

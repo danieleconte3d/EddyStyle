@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Box, Typography, Paper, Tooltip } from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 // Costante per l'altezza di ogni slot orario (in pixel)
@@ -11,7 +11,7 @@ const APPOINTMENTS_CONTAINER_WIDTH = 130;
 const TimeSlotsContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
   flexGrow: 1,
-  height: 'calc(100vh - 300px)',
+  height: '100%',
   overflow: 'auto',
   '&::-webkit-scrollbar': {
     display: 'none' // Nascondi la scrollbar
@@ -20,7 +20,9 @@ const TimeSlotsContainer = styled(Box)(({ theme }) => ({
   scrollbarWidth: 'none', // Per Firefox
   maskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)',
   WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)',
-  padding: '0 4px'
+  padding: '0 4px',
+  display: 'flex',
+  flexDirection: 'column'
 }));
 
 // Stile per la fascia oraria
@@ -47,6 +49,9 @@ const AppointmentBox = styled(Box)(({ theme, color }) => ({
   zIndex: 1,
   boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
   '&:hover': {
     transform: 'translateY(-1px)',
     boxShadow: '0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23)'
@@ -66,117 +71,6 @@ function WeekDay({
 }) {
   const timeSlotsContainerRef = useRef(null);
 
-  // Effetto per impostare lo scroll iniziale alle 7:00
-  useEffect(() => {
-    if (timeSlotsContainerRef.current) {
-      // Calcola la posizione di scroll per le 7:00
-      // Ogni slot è SLOT_HEIGHT pixel, e le 7:00 sono 14 slot dall'inizio (7 * 2 slot per ora)
-      const scrollPosition = 7 * 2 * SLOT_HEIGHT;
-      timeSlotsContainerRef.current.scrollTop = scrollPosition;
-    }
-  }, []);
-
-  // Funzione per convertire la data dal formato italiano al formato ISO
-  const convertItalianDateToISO = (italianDate) => {
-    try {
-      // Se la data è già in formato ISO, la restituiamo così com'è
-      if (italianDate.includes('T')) {
-        return italianDate;
-      }
-
-      // Dividi la data in giorno e mese
-      const [day, month] = italianDate.split('/');
-      
-      // Ottieni l'anno corrente
-      const currentYear = new Date().getFullYear();
-      
-      // Crea una nuova data nel formato ISO
-      return new Date(currentYear, parseInt(month) - 1, parseInt(day)).toISOString();
-    } catch (error) {
-      console.error('Errore nella conversione della data:', error);
-      return null;
-    }
-  };
-
-  // Calcola la posizione e l'altezza di un appuntamento
-  const getAppointmentPosition = (appointment, date) => {
-    try {
-      console.log('Calcolo posizione per appuntamento:', appointment);
-      console.log('Data di riferimento:', date);
-
-      // Verifica che la data sia una stringa valida o un oggetto Date
-      if (!date || (typeof date === 'string' && !date.trim())) {
-        console.log('Data non valida');
-        return null;
-      }
-
-      // Converti la data in formato ISO se necessario
-      const isoDate = convertItalianDateToISO(date);
-      if (!isoDate) {
-        console.log('Conversione data fallita');
-        return null;
-      }
-
-      // Converti la data in un oggetto Date se non lo è già
-      const appointmentDate = new Date(appointment.startTime);
-      const currentDate = new Date(isoDate);
-      
-      console.log('Data appuntamento:', appointmentDate);
-      console.log('Data corrente:', currentDate);
-      
-      // Verifica che le date siano valide
-      if (isNaN(appointmentDate.getTime()) || isNaN(currentDate.getTime())) {
-        console.log('Date non valide');
-        return null;
-      }
-      
-      // Confronta solo giorno, mese e anno
-      if (appointmentDate.getDate() !== currentDate.getDate() || 
-          appointmentDate.getMonth() !== currentDate.getMonth() || 
-          appointmentDate.getFullYear() !== currentDate.getFullYear()) {
-        console.log('Date non corrispondono');
-        return null;
-      }
-      
-      // Verifica che startTime ed endTime siano presenti
-      if (!appointment.startTime || !appointment.endTime) {
-        console.log('Orari mancanti');
-        return null;
-      }
-
-      // Converti i timestamp in oggetti Date
-      const startTime = new Date(appointment.startTime);
-      const endTime = new Date(appointment.endTime);
-      
-      // Verifica che gli orari siano validi
-      if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-        console.log('Orari non validi');
-        return null;
-      }
-
-      // Ottieni le ore e i minuti nel fuso orario locale
-      const startHour = startTime.getHours();
-      const startMinute = startTime.getMinutes();
-      const endHour = endTime.getHours();
-      const endMinute = endTime.getMinutes();
-      
-      console.log('Orario inizio:', `${startHour}:${startMinute}`);
-      console.log('Orario fine:', `${endHour}:${endMinute}`);
-      
-      // Calcola la posizione in pixel dall'inizio del giorno
-      // Ogni ora è composta da 2 slot da 30 minuti
-      const startPosition = (startHour * 2 + Math.floor(startMinute / 30)) * SLOT_HEIGHT;
-      const durationInMinutes = (endHour - startHour) * 60 + (endMinute - startMinute);
-      const height = Math.ceil(durationInMinutes / 30) * SLOT_HEIGHT;
-      
-      console.log('Posizione calcolata:', { top: startPosition, height });
-      return { top: startPosition, height };
-    } catch (error) {
-      console.error('Errore nel calcolo della posizione:', error);
-      return null;
-    }
-  };
-
   // Formatta orario per la visualizzazione
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -184,6 +78,50 @@ function WeekDay({
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
+  };
+
+  // Formatta la data per mostrare il mese in lettere
+  const formatDate = (dateStr) => {
+    const [day, month] = dateStr.split('/');
+    const months = [
+      'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+      'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+    ];
+    return `${day} ${months[parseInt(month) - 1]}`;
+  };
+
+  // Calcola la posizione e l'altezza di un appuntamento
+  const getAppointmentPosition = (appointment, date) => {
+    try {
+      const startTime = new Date(appointment.startTime);
+      const endTime = new Date(appointment.endTime);
+      
+      // Calcolo della posizione verticale
+      const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+      const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+      const duration = endMinutes - startMinutes;
+      
+      const SLOT_HEIGHT = 30; // altezza di ogni slot in pixel
+      const MINUTES_PER_SLOT = 30; // minuti per ogni slot
+      const CONTAINER_PADDING = 20; // padding del contenitore
+      const FIRST_LINE_OFFSET = -8; // offset della prima linea per il testo
+      const TIME_LABEL_HEIGHT = 16; // altezza del riquadro verde con il testo dell'orario
+      const TIME_LABEL_OFFSET = TIME_LABEL_HEIGHT / 2; // offset per centrare rispetto al riquadro verde
+      
+      const top = (startMinutes / MINUTES_PER_SLOT) * SLOT_HEIGHT + CONTAINER_PADDING + FIRST_LINE_OFFSET + TIME_LABEL_OFFSET;
+      const height = (duration / MINUTES_PER_SLOT) * SLOT_HEIGHT;
+      
+      return { 
+        top,
+        height,
+        left: 40,
+        width: APPOINTMENTS_CONTAINER_WIDTH - 4,
+        margin: 2
+      };
+    } catch (error) {
+      console.error('Errore nel calcolo della posizione:', error);
+      return null;
+    }
   };
 
   // Genera array di fasce orarie
@@ -207,10 +145,17 @@ function WeekDay({
 
   // Funzione per gestire la sovrapposizione degli appuntamenti
   const handleOverlappingAppointments = (appointments, date) => {
+    console.log('Gestione sovrapposizioni:', {
+      appointmentsCount: appointments.length,
+      date
+    });
+
     const positions = appointments.map(appointment => {
       const position = getAppointmentPosition(appointment, date);
       return position ? { ...appointment, position } : null;
     }).filter(Boolean);
+
+    console.log('Posizioni calcolate:', positions);
 
     // Raggruppa gli appuntamenti sovrapposti
     const overlappingGroups = [];
@@ -257,6 +202,10 @@ function WeekDay({
     return positions;
   };
 
+  // Calcola le posizioni degli appuntamenti
+  const positionedAppointments = handleOverlappingAppointments(appointments, date);
+  console.log('Appuntamenti posizionati:', positionedAppointments);
+
   return (
     <Paper
       elevation={1}
@@ -275,10 +224,13 @@ function WeekDay({
         borderColor: 'primary.main',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%'
+        height: '100%',
+        width: '100%',
+        position: 'relative',
+        overflow: 'hidden'
       }}
     >
-      <Box sx={{ mb: 0.25 }}>
+      <Box sx={{ mb: 0.25, flexShrink: 0 }}>
         <Typography
           variant="h6"
           component="div"
@@ -302,11 +254,20 @@ function WeekDay({
             lineHeight: 1.2
           }}
         >
-          {date}
+          {formatDate(date)}
         </Typography>
       </Box>
 
-      <TimeSlotsContainer ref={timeSlotsContainerRef}>
+      <TimeSlotsContainer 
+        ref={timeSlotsContainerRef}
+        sx={{
+          position: 'relative',
+          flex: 1,
+          overflow: 'auto',
+          paddingTop: '20px',
+          minHeight: 0
+        }}
+      >
         {timeSlots.map((slot, i) => (
           <TimeSlot 
             key={i} 
@@ -318,8 +279,7 @@ function WeekDay({
             }}
             sx={{
               position: 'relative',
-              height: SLOT_HEIGHT,
-              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+              height: '30px',
               '&:hover': {
                 backgroundColor: 'rgba(255, 255, 255, 0.05)'
               }
@@ -340,59 +300,24 @@ function WeekDay({
                 {slot.label}
               </Typography>
             )}
-            {slot.minute === 30 && (
-              <Box sx={{
-                position: 'absolute',
-                top: 0,
-                left: '40px',
-                right: 0,
-                height: '1px',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)'
-              }} />
-            )}
           </TimeSlot>
         ))}
 
-        {handleOverlappingAppointments(appointments, date).map(appointment => {
-          console.log('Rendering appuntamento:', {
-            title: appointment.title,
-            position: appointment.position,
-            slotHeight: SLOT_HEIGHT
-          });
-          return (
-            <Tooltip
-              key={appointment.id}
-              title={
-                <Box sx={{ p: 1 }}>
-                  <Typography variant="subtitle2" sx={{ color: 'white', fontWeight: 'bold' }}>
-                    {appointment.title}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'white' }}>
-                    Cliente: {appointment.client}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'white' }}>
-                    Orario: {formatTime(appointment.startTime)} - {formatTime(appointment.endTime)}
-                  </Typography>
-                  {appointment.notes && (
-                    <Typography variant="body2" sx={{ color: 'white', mt: 1 }}>
-                      Note: {appointment.notes}
-                    </Typography>
-                  )}
-                </Box>
-              }
-              arrow
-              placement="right"
-              enterDelay={200}
-              leaveDelay={200}
-            >
+        {positionedAppointments && positionedAppointments.length > 0 ? (
+          positionedAppointments.map(appointment => {
+            const position = appointment.position;
+            return (
               <AppointmentBox
+                key={appointment.id}
                 color={appointment.color}
                 style={{
-                  top: `${appointment.position.top}px`,
-                  height: `${appointment.position.height}px`,
-                  left: `${appointment.position.left}px`,
-                  width: `${appointment.position.width - (appointment.position.margin * 2)}px`,
-                  margin: `0 ${appointment.position.margin}px`
+                  top: `${position.top}px`,
+                  height: `${position.height}px`,
+                  left: `${position.left}px`,
+                  width: `${position.width}px`,
+                  margin: `0 ${position.margin}px`,
+                  position: 'absolute',
+                  zIndex: 999
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -407,7 +332,10 @@ function WeekDay({
                     fontWeight: 'bold', 
                     fontSize: '0.7rem',
                     color: 'white',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                 >
                   {formatTime(appointment.startTime)} - {appointment.title}
@@ -418,15 +346,18 @@ function WeekDay({
                     display: 'block', 
                     fontSize: '0.7rem',
                     color: 'white',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
+                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
                   }}
                 >
                   {appointment.client}
                 </Typography>
               </AppointmentBox>
-            </Tooltip>
-          );
-        })}
+            );
+          })
+        ) : null}
       </TimeSlotsContainer>
     </Paper>
   );

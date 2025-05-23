@@ -6,16 +6,6 @@ const isElectron = () => {
   return window && window.process && window.process.type === 'renderer';
 };
 
-// Ottieni ipcRenderer solo se siamo in Electron
-let ipcRenderer = null;
-if (isElectron()) {
-  try {
-    ipcRenderer = window.require('electron').ipcRenderer;
-  } catch (error) {
-    console.error('Errore durante il caricamento di electron:', error);
-  }
-}
-
 function UpdateNotification() {
   const [notification, setNotification] = useState(null);
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -24,46 +14,46 @@ function UpdateNotification() {
 
   useEffect(() => {
     // Se non siamo in Electron, non fare nulla
-    if (!ipcRenderer) return;
+    if (!isElectron() || !window.electron) return;
     
     // Ascolta i messaggi di aggiornamento
-    ipcRenderer.on('update-message', (_, message) => {
-      setNotification(message);
-      if (message.type === 'success') {
-        setIsDownloading(false);
-      }
-    });
+    if (window.electron.onUpdateMessage) {
+      window.electron.onUpdateMessage((_, message) => {
+        setNotification(message);
+        if (message.type === 'success') {
+          setIsDownloading(false);
+        }
+      });
+    }
 
     // Ascolta la disponibilità di aggiornamenti
-    ipcRenderer.on('update-available', (_, info) => {
-      setUpdateInfo(info);
-    });
+    if (window.electron.onUpdateAvailable) {
+      window.electron.onUpdateAvailable((_, info) => {
+        setUpdateInfo(info);
+      });
+    }
 
     // Ascolta il progresso del download
-    ipcRenderer.on('download-progress', (_, progressObj) => {
-      setDownloadProgress(progressObj.percent || 0);
-    });
-
-    return () => {
-      ipcRenderer.removeAllListeners('update-message');
-      ipcRenderer.removeAllListeners('update-available');
-      ipcRenderer.removeAllListeners('download-progress');
-    };
+    if (window.electron.onDownloadProgress) {
+      window.electron.onDownloadProgress((_, progressObj) => {
+        setDownloadProgress(progressObj.percent || 0);
+      });
+    }
   }, []);
 
   const handleStartUpdate = () => {
-    if (!ipcRenderer) return;
+    if (!isElectron() || !window.electron?.startUpdate) return;
     setIsDownloading(true);
-    ipcRenderer.send('start-update');
+    window.electron.startUpdate();
   };
 
   const handleRestartApp = () => {
-    if (!ipcRenderer) return;
-    ipcRenderer.send('restart-app');
+    if (!isElectron() || !window.electron?.restartApp) return;
+    window.electron.restartApp();
   };
 
   // Se non siamo in Electron, non mostrare nulla
-  if (!ipcRenderer) return null;
+  if (!isElectron() || !window.electron) return null;
 
   return (
     <>

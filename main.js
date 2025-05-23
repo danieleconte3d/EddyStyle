@@ -3,8 +3,6 @@ const path = require('path');
 const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const url = require('url');
-const db = require('./src/database');
-const sqlite3 = require('sqlite3').verbose();
 
 // Verifica lo stato dell'ambiente
 console.log('NODE_ENV:', process.env.NODE_ENV);
@@ -48,7 +46,7 @@ function createWindow() {
     loadUrl = 'http://localhost:3000';
     console.log('Ambiente di sviluppo, caricamento da:', loadUrl);
   } else {
-    const reactAppPath = path.join(__dirname, 'build', 'index.html');
+    const reactAppPath = path.join(__dirname, 'src', 'build', 'index.html');
     console.log('Percorso app React:', reactAppPath);
     console.log('File app React esiste:', fs.existsSync(reactAppPath));
     
@@ -201,104 +199,6 @@ ipcMain.on('start-update', () => {
 
 ipcMain.on('restart-app', () => {
   autoUpdater.quitAndInstall();
-});
-
-// Gestori IPC per il database
-ipcMain.handle('get-all-appointments', async () => {
-  try {
-    const appointments = await db.getAllAppointments();
-    return appointments;
-  } catch (error) {
-    console.error('Errore nel recupero degli appuntamenti:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('create-appointment', async (event, appointment) => {
-  try {
-    const result = await db.createAppointment(appointment);
-    return result;
-  } catch (error) {
-    console.error('Errore nella creazione dell\'appuntamento:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('update-appointment', async (event, id, appointment) => {
-  try {
-    const result = await db.updateAppointment(id, appointment);
-    return result;
-  } catch (error) {
-    console.error('Errore nell\'aggiornamento dell\'appuntamento:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('delete-appointment', async (event, id) => {
-  try {
-    const result = await db.deleteAppointment(id);
-    return result;
-  } catch (error) {
-    console.error('Errore nell\'eliminazione dell\'appuntamento:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('get-appointments-by-date-range', async (event, startDate, endDate) => {
-  try {
-    const appointments = await db.getAppointmentsByDateRange(startDate, endDate);
-    return appointments;
-  } catch (error) {
-    console.error('Errore nel recupero degli appuntamenti per intervallo di date:', error);
-    throw error;
-  }
-});
-
-// Handler per il personale
-ipcMain.handle('get-all-personale', async () => {
-  try {
-    return await db.getAllPersonale();
-  } catch (error) {
-    console.error('Errore nel recupero del personale:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('create-personale', async (event, data) => {
-  try {
-    return await db.createPersonale(data);
-  } catch (error) {
-    console.error('Errore nella creazione del personale:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('update-personale', async (event, id, data) => {
-  try {
-    return await db.updatePersonale(id, data);
-  } catch (error) {
-    console.error('Errore nell\'aggiornamento del personale:', error);
-    throw error;
-  }
-});
-
-ipcMain.handle('delete-personale', async (event, id) => {
-  try {
-    return await db.deletePersonale(id);
-  } catch (error) {
-    console.error('Errore nell\'eliminazione del personale:', error);
-    throw error;
-  }
-});
-
-// Handler per il debug del database
-ipcMain.handle('debug-database', async () => {
-  try {
-    return await db.debugDatabase();
-  } catch (error) {
-    console.error('Errore nel debug del database:', error);
-    throw error;
-  }
 });
 
 // Termina completamente l'app quando tutte le finestre sono chiuse (eccetto su macOS)

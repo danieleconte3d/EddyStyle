@@ -8,13 +8,14 @@ import { useNavigate } from 'react-router-dom';
 import { radios } from '../config/radios';
 import RadioItem from './RadioItem';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode } from 'swiper/modules';
+import { FreeMode, Virtual } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/free-mode';
 import RadioBrowserAPI from '../utils/radioAPI';
 import RadioStorage from '../utils/radioStorage';
 import RadioSideMenu from './RadioSideMenu';
 import { useRadio } from '../contexts/RadioContext';
+import NowPlayingBar from './NowPlayingBar';
 
 const CarouselContainer = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -78,6 +79,7 @@ function RadioCarousel({ onRadioChange }) {
   const swiperRef = useRef(null);
   const [popularRadios, setPopularRadios] = useState([]);
   const [isScrolling, setIsScrolling] = useState(false);
+  const isScrollingRef = useRef(false); // per ridurre re-render
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 10 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadingBatchSize = 10;
@@ -287,7 +289,10 @@ function RadioCarousel({ onRadioChange }) {
       
       if (now - lastCall >= throttleInterval) {
         performanceData.current.scrollEvents++;
-        setIsScrolling(true);
+        if (!isScrollingRef.current) {
+          isScrollingRef.current = true;
+          setIsScrolling(true); // trigger re-render solo quando cambia
+        }
         setCurrentIndex(swiper.activeIndex);
 
         // Carica più radio solo quando siamo vicini alla fine e non stiamo già caricando
@@ -297,17 +302,22 @@ function RadioCarousel({ onRadioChange }) {
         }
 
         lastCall = now;
+        // Log dettagliato ogni 20 eventi di scroll per non intasare la console
+        if (performanceData.current.scrollEvents % 20 === 0) {
+          console.log(`[Scroll] index=${swiper.activeIndex} / ${displayRadios.length} (events=${performanceData.current.scrollEvents})`);
+        }
       }
 
       // Debounce dello stato di scroll con timeout più lungo
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
+        isScrollingRef.current = false;
         setIsScrolling(false);
       }, 300);
     };
   }, [displayRadios.length, isLoadingMore, loadMoreRadios]);
 
-  // Ottimizzazione del rendering dei singoli elementi del carosello
+  // Funzione di rendering originale delle slide
   const renderRadioSlide = useCallback((radio) => (
     <SwiperSlide
       key={radio.id}
@@ -424,12 +434,17 @@ function RadioCarousel({ onRadioChange }) {
       const avgFrameTime = performanceData.current.frames.reduce((a, b) => a + b, 0) / performanceData.current.frames.length;
       const fps = 1000 / avgFrameTime;
 
-      if (frameRef.current % 60 === 0) { // Log ogni 60 frame per non intasare la console
+      if (frameRef.current % 60 === 0) { // Log ogni 60 frame (~1s a 60fps)
         console.log(`[Performance] Stats:`, {
           fps: Math.round(fps),
           frameTime: Math.round(frameDelta * 100) / 100 + 'ms',
           scrollEvents: performanceData.current.scrollEvents,
-          loadEvents: performanceData.current.loadEvents
+          loadEvents: performanceData.current.loadEvents,
+          memory: window.performance?.memory ? {
+            usedJS: Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+            totalJS: Math.round(window.performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
+            limitJS: Math.round(window.performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB'
+          } : 'N/A'
         });
       }
 
@@ -455,6 +470,15 @@ function RadioCarousel({ onRadioChange }) {
           historyCount={getHistoryCount()}
         />
         
+        {/* Player in riproduzione */}
+        {currentRadio && (
+          <NowPlayingBar 
+            radio={currentRadio} 
+            isPlaying={isPlaying} 
+            onTogglePlay={togglePlay} 
+          />
+        )}
+
         {/* Campo di ricerca */}
         <Box sx={{ 
           width: '80%',
@@ -508,7 +532,7 @@ function RadioCarousel({ onRadioChange }) {
         <Box sx={{ width: '100%', flex: 1 }}>
           <Swiper
             ref={swiperRef}
-            modules={[FreeMode]}
+            modules={[FreeMode, Virtual]}
             freeMode={{
               enabled: true,
               momentum: true,
@@ -522,14 +546,17 @@ function RadioCarousel({ onRadioChange }) {
             centeredSlides={true}
             onSlideChange={handleScroll}
             onTouchStart={() => {
+              isScrollingRef.current = true;
               setIsScrolling(true);
               performanceData.current.scrollEvents = 0;
             }}
             onTouchEnd={() => {
               setTimeout(() => {
+                isScrollingRef.current = false;
                 setIsScrolling(false);
               }, 300);
             }}
+            preloadImages={false}
             style={{
               width: '100%',
               height: '100%',

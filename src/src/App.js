@@ -9,6 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 // Componenti originali
 import MiniPlayer from './components/MiniPlayer';
 import UpdateNotification from './components/UpdateNotification';
+import WindowControls from './components/WindowControls';
 
 // Componenti delle pagine
 import Dashboard from './pages/Dashboard';
@@ -20,7 +21,7 @@ import Personale from './pages/Personale';
 // Context Provider
 import { RadioProvider } from './contexts/RadioContext';
 
-// Tema personalizzato
+// Tema personalizzato ottimizzato per mobile e desktop
 const theme = createTheme({
   palette: {
     mode: 'dark',
@@ -29,6 +30,29 @@ const theme = createTheme({
     },
     secondary: {
       main: '#00e5ff',
+    },
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 900,
+      lg: 1200,
+      xl: 1536,
+    },
+  },
+  components: {
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          paddingLeft: '16px',
+          paddingRight: '16px',
+          '@media (max-width: 600px)': {
+            paddingLeft: '8px',
+            paddingRight: '8px',
+          },
+        },
+      },
     },
   },
 });
@@ -46,7 +70,6 @@ const PlaceholderPage = ({ name }) => (
 function App() {
   const [appReady, setAppReady] = useState(false);
   const [appError, setAppError] = useState(null);
-  const [renderStage, setRenderStage] = useState('initial');
 
   // Gestione degli errori globali e inizializzazione
   useEffect(() => {
@@ -55,40 +78,16 @@ function App() {
       setAppError('Si è verificato un errore imprevisto: ' + (event.error?.message || 'Errore sconosciuto'));
     });
 
-    // Test di rendering progressivo
+    // Inizializzazione più rapida per web
     console.log('App component mounted');
     
-    const timer1 = setTimeout(() => {
-      console.log('Stage 1: App ready');
+    const timer = setTimeout(() => {
+      console.log('App ready');
       setAppReady(true);
-    }, 1000);
-    
-    const timer2 = setTimeout(() => {
-      console.log('Stage 2: Basic render');
-      setRenderStage('basic');
-    }, 2000);
-    
-    const timer3 = setTimeout(() => {
-      console.log('Stage 3: Router initialized');
-      setRenderStage('router');
-    }, 3000);
-    
-    const timer4 = setTimeout(() => {
-      console.log('Stage 4: RadioProvider and MiniPlayer added');
-      setRenderStage('radio-components');
-    }, 4000);
-    
-    const timer5 = setTimeout(() => {
-      console.log('Stage 5: All components added');
-      setRenderStage('complete');
-    }, 5000);
+    }, 500); // Ridotto da 1000ms a 500ms
     
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      clearTimeout(timer4);
-      clearTimeout(timer5);
+      clearTimeout(timer);
     };
   }, []);
 
@@ -108,12 +107,17 @@ function App() {
             color: 'text.primary'
           }}
         >
-          <Typography variant="h3" gutterBottom>
+          <Typography variant="h3" gutterBottom sx={{
+            fontSize: { xs: '1.5rem', sm: '2rem', md: '3rem' }
+          }}>
             Eddy Style
           </Typography>
           <CircularProgress color="primary" size={60} />
-          <Typography variant="body1" sx={{ mt: 2 }}>
-            Caricamento dell'applicazione (Fase 1)...
+          <Typography variant="body1" sx={{ 
+            mt: 2,
+            fontSize: { xs: '0.875rem', sm: '1rem' }
+          }}>
+            Caricamento dell'applicazione...
           </Typography>
         </Box>
       </ThemeProvider>
@@ -142,16 +146,8 @@ function App() {
               </Box>
             )}
             
-            {renderStage !== 'complete' && (
-              <Box sx={{ 
-                p: 1, 
-                bgcolor: 'primary.main', 
-                display: 'flex', 
-                justifyContent: 'center'
-              }}>
-                <Typography variant="body2">Fase di caricamento: {renderStage}</Typography>
-              </Box>
-            )}
+            {/* Controlli finestra solo in Electron */}
+            <WindowControls />
             
             <MiniPlayer />
             
