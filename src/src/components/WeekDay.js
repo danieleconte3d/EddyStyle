@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, useTheme, useMediaQuery } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 // Costante per l'altezza di ogni slot orario (in pixel)
 const SLOT_HEIGHT = 30;
 // Costante per la larghezza del contenitore degli appuntamenti
 const APPOINTMENTS_CONTAINER_WIDTH = 130;
+// Costante per il padding laterale degli appuntamenti
+const APPOINTMENT_PADDING = 8;
 
 // Stile per il contenitore degli slot orari
 const TimeSlotsContainer = styled(Box)(({ theme }) => ({
@@ -70,6 +72,26 @@ function WeekDay({
   businessHours = { start: 0, end: 24, interval: 30 }
 }) {
   const timeSlotsContainerRef = useRef(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  // Imposta la posizione di scroll iniziale alle 8:00
+  useEffect(() => {
+    if (timeSlotsContainerRef.current) {
+      const SLOT_HEIGHT = 30; // altezza di ogni slot in pixel
+      const MINUTES_PER_SLOT = 30; // minuti per ogni slot
+      const CONTAINER_PADDING = 20; // padding del contenitore
+      const FIRST_LINE_OFFSET = -8; // offset della prima linea per il testo
+      const TIME_LABEL_HEIGHT = 16; // altezza del riquadro verde con il testo dell'orario
+      const TIME_LABEL_OFFSET = TIME_LABEL_HEIGHT / 2; // offset per centrare rispetto al riquadro verde
+      
+      // Calcola la posizione per le 8:00
+      const startMinutes = 8 * 60; // 8:00 in minuti
+      const scrollPosition = (startMinutes / MINUTES_PER_SLOT) * SLOT_HEIGHT + CONTAINER_PADDING + FIRST_LINE_OFFSET + TIME_LABEL_OFFSET;
+      
+      timeSlotsContainerRef.current.scrollTop = scrollPosition;
+    }
+  }, []); // Esegui solo al montaggio del componente
 
   // Formatta orario per la visualizzazione
   const formatTime = (timestamp) => {
@@ -115,7 +137,7 @@ function WeekDay({
         top,
         height,
         left: 40,
-        width: APPOINTMENTS_CONTAINER_WIDTH - 4,
+        right: APPOINTMENT_PADDING,
         margin: 2
       };
     } catch (error) {
@@ -191,9 +213,11 @@ function WeekDay({
 
     // Calcola la larghezza per ogni gruppo di appuntamenti sovrapposti
     overlappingGroups.forEach(group => {
-      const width = APPOINTMENTS_CONTAINER_WIDTH / group.length;
+      const containerWidth = timeSlotsContainerRef.current?.offsetWidth || 0;
+      const availableWidth = containerWidth - 40 - APPOINTMENT_PADDING; // Sottrai il margine sinistro e il padding destro
+      const width = availableWidth / group.length;
       group.forEach((appointment, index) => {
-        appointment.position.width = width;
+        appointment.position.width = width - 4; // Sottrai il margine
         appointment.position.left = 40 + (width * index);
         appointment.position.margin = 2;
       });
@@ -231,31 +255,35 @@ function WeekDay({
       }}
     >
       <Box sx={{ mb: 0.25, flexShrink: 0 }}>
-        <Typography
-          variant="h6"
-          component="div"
-          sx={{
-            fontWeight: isToday ? 'bold' : 'normal',
-            textAlign: 'center',
-            mb: 0.25,
-            fontSize: '0.875rem',
-            lineHeight: 1.2
-          }}
-        >
-          {day}
-        </Typography>
-        <Typography
-          variant="body1"
-          component="div"
-          sx={{
-            textAlign: 'center',
-            opacity: isToday ? 1 : 0.7,
-            fontSize: '0.75rem',
-            lineHeight: 1.2
-          }}
-        >
-          {formatDate(date)}
-        </Typography>
+        {!isMobile && (
+          <>
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{
+                fontWeight: isToday ? 'bold' : 'normal',
+                textAlign: 'center',
+                mb: 0.25,
+                fontSize: '0.875rem',
+                lineHeight: 1.2
+              }}
+            >
+              {day}
+            </Typography>
+            <Typography
+              variant="body1"
+              component="div"
+              sx={{
+                textAlign: 'center',
+                opacity: isToday ? 1 : 0.7,
+                fontSize: '0.75rem',
+                lineHeight: 1.2
+              }}
+            >
+              {formatDate(date)}
+            </Typography>
+          </>
+        )}
       </Box>
 
       <TimeSlotsContainer 

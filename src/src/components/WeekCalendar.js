@@ -68,6 +68,19 @@ function WeekCalendar({
     return days;
   }, [currentWeek, appointments]);
 
+  // Funzioni per la navigazione tra i mesi
+  const handlePrevMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setCurrentDate(newDate);
+  };
+
+  const handleNextMonth = () => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setCurrentDate(newDate);
+  };
+
   // Gestisce il cambio di giorno su mobile
   const handlePrevDay = () => {
     const newDate = subDays(currentDate, 1);
@@ -199,8 +212,8 @@ function WeekCalendar({
               }}
             >
               <CalendarMonthIcon />
-              <Typography variant="h6">
-                {format(currentDate, 'EEEE d MMMM', { locale: it })}
+              <Typography variant="body1">
+                {format(currentDate, 'dd MMMM yyyy', { locale: it })}
               </Typography>
             </Box>
 
@@ -209,64 +222,69 @@ function WeekCalendar({
             </IconButton>
           </Box>
 
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex' }}>
-            <WeekDay
-              day={format(currentDate, 'EEEE', { locale: it })}
-              date={format(currentDate, 'd MMMM', { locale: it })}
-              isToday={currentDate.toDateString() === new Date().toDateString()}
-              isSelected={true}
-              onTimeSlotClick={(time) => onTimeSlotClick && onTimeSlotClick(time, currentDate)}
-              appointments={appointments.filter(appointment => {
-                const appointmentDate = new Date(appointment.startTime);
-                return appointmentDate.getDate() === currentDate.getDate() &&
-                       appointmentDate.getMonth() === currentDate.getMonth() &&
-                       appointmentDate.getFullYear() === currentDate.getFullYear();
-              })}
-              onAppointmentClick={onAppointmentClick}
-            />
-          </Box>
-
-          <Dialog 
-            open={calendarOpen} 
+          <Dialog
+            open={calendarOpen}
             onClose={() => setCalendarOpen(false)}
             maxWidth="xs"
             fullWidth
           >
             <Box sx={{ p: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2, textAlign: 'center' }}>
-                {format(currentDate, 'MMMM yyyy', { locale: it })}
-              </Typography>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                mb: 2
+              }}>
+                <IconButton onClick={handlePrevMonth} color="primary">
+                  <ChevronLeftIcon />
+                </IconButton>
+                <Typography variant="h6">
+                  {format(currentDate, 'MMMM yyyy', { locale: it })}
+                </Typography>
+                <IconButton onClick={handleNextMonth} color="primary">
+                  <ChevronRightIcon />
+                </IconButton>
+              </Box>
+
               <Grid container spacing={1}>
                 {['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'].map(day => (
                   <Grid item xs key={day}>
-                    <Typography variant="caption" sx={{ display: 'block', textAlign: 'center' }}>
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        display: 'block', 
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                        color: 'text.secondary'
+                      }}
+                    >
                       {day}
                     </Typography>
                   </Grid>
                 ))}
-                {monthDays.map((date, index) => {
-                  const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                  const isSelected = date.toDateString() === currentDate.toDateString();
-                  const isToday = date.toDateString() === new Date().toDateString();
-                  
+                {monthDays.map((day, index) => {
+                  const isToday = day.toDateString() === new Date().toDateString();
+                  const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
                   return (
                     <Grid item xs key={index}>
                       <Button
-                        onClick={() => handleDateSelect(date)}
+                        fullWidth
+                        onClick={() => handleDateSelect(day)}
                         sx={{
                           minWidth: '36px',
                           height: '36px',
                           p: 0,
-                          color: isCurrentMonth ? 'text.primary' : 'text.disabled',
+                          borderRadius: '50%',
                           backgroundColor: isSelected ? 'primary.main' : 'transparent',
+                          color: isSelected ? 'white' : 'text.primary',
                           '&:hover': {
-                            backgroundColor: isSelected ? 'primary.dark' : 'action.hover'
+                            backgroundColor: isSelected ? 'primary.dark' : 'rgba(255, 255, 255, 0.1)'
                           },
-                          border: isToday ? '1px solid' : 'none',
+                          border: isToday ? '2px solid' : 'none',
                           borderColor: 'primary.main'
                         }}
                       >
-                        {format(date, 'd')}
+                        {format(day, 'd')}
                       </Button>
                     </Grid>
                   );
@@ -274,6 +292,18 @@ function WeekCalendar({
               </Grid>
             </Box>
           </Dialog>
+
+          <Box sx={{ flex: 1, minHeight: 0 }}>
+            <WeekDay
+              day={weekDays[0].day}
+              date={weekDays[0].date}
+              isToday={weekDays[0].isToday}
+              isSelected={true}
+              appointments={weekDays[0].appointments}
+              onAppointmentClick={onAppointmentClick}
+              onTimeSlotClick={(time) => onTimeSlotClick && onTimeSlotClick(time, weekDays[0].fullDate)}
+            />
+          </Box>
         </>
       )}
     </Box>

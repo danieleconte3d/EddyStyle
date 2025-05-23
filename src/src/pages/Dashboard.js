@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Typography, Container, Grid } from '@mui/material';
+import { Box, Button, Typography, Container, Grid, useTheme, useMediaQuery } from '@mui/material';
 import RadioIcon from '@mui/icons-material/Radio';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import InventoryIcon from '@mui/icons-material/Inventory';
@@ -9,13 +9,28 @@ import TopBar from '../components/TopBar';
 
 function Dashboard() {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   // Log per debugging
   useEffect(() => {
     console.log('Dashboard component mounted');
   }, []);
 
-  const buttons = [
+  const buttons = isMobile ? [
+    {
+      title: 'Calendario',
+      icon: <CalendarMonthIcon sx={{ fontSize: 60 }} />,
+      path: '/clienti',
+      color: '#00e5ff'
+    },
+    {
+      title: 'Personale',
+      icon: <PeopleIcon sx={{ fontSize: 60 }} />,
+      path: '/personale',
+      color: '#ff9800'
+    }
+  ] : [
     {
       title: 'Radio',
       icon: <RadioIcon sx={{ fontSize: 60 }} />,
@@ -73,7 +88,7 @@ function Dashboard() {
         <Box sx={{ width: '100%', maxWidth: 1000, mx: 'auto' }}>
           <Grid container spacing={4} justifyContent="center">
             {buttons.map((button) => (
-              <Grid item key={button.title} xs={12} sm={6} md={4}>
+              <Grid item key={button.title} xs={12} sm={6} md={isMobile ? 6 : 4}>
                 <Button
                   variant="contained"
                   onClick={() => {
