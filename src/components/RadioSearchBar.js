@@ -2,9 +2,21 @@ import React from 'react';
 import { Box, TextField, CircularProgress } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
-function RadioSearchBar({ searchQuery, onSearchChange, isLoading }) {
+function RadioSearchBar({ searchQuery, onSearchChange, onSearchSubmit, isLoading }) {
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log('📝 Form inviato con query:', searchQuery);
+    if (searchQuery.trim()) {
+      console.log('✅ Chiamata onSearchSubmit con:', searchQuery);
+      onSearchSubmit(searchQuery);
+    } else {
+      console.log('❌ Query vuota, ricerca non eseguita');
+    }
+  };
+
+  const handleChange = (e) => {
+    console.log('📝 Input cambiato:', e.target.value);
+    onSearchChange(e.target.value);
   };
 
   return (
@@ -20,7 +32,7 @@ function RadioSearchBar({ searchQuery, onSearchChange, isLoading }) {
           variant="outlined"
           placeholder="Cerca una radio..."
           value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onChange={handleChange}
           InputProps={{
             startAdornment: <SearchIcon sx={{ color: 'white', mr: 1 }} />,
             endAdornment: isLoading && <CircularProgress size={20} sx={{ color: 'white' }} />,

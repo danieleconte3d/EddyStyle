@@ -5,6 +5,11 @@ import CssBaseline from '@mui/material/CssBaseline';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
+import { AuthProvider } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import Login from './pages/Login';
+import Layout from './components/Layout';
+import Radio from './pages/Radio';
 
 // Componenti originali
 import MiniPlayer from './components/MiniPlayer';
@@ -14,7 +19,6 @@ import UpdateNotification from './components/UpdateNotification';
 import Dashboard from './pages/Dashboard';
 import Cliente from './pages/Cliente';
 import Magazzino from './pages/Magazzino';
-import Radio from './pages/Radio';
 import Personale from './pages/Personale';
 
 // Context Provider
@@ -55,16 +59,6 @@ const theme = createTheme({
     },
   },
 });
-
-// Componente placeholder per le pagine
-const PlaceholderPage = ({ name }) => (
-  <Box sx={{ p: 4, textAlign: 'center' }}>
-    <Typography variant="h4">Pagina {name}</Typography>
-    <Typography variant="body1" sx={{ mt: 2 }}>
-      Questo è un placeholder per la pagina {name}.
-    </Typography>
-  </Box>
-);
 
 function App() {
   const [appReady, setAppReady] = useState(false);
@@ -127,40 +121,74 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <RadioProvider>
-        <Router>
-          <Box sx={{ 
-            display: 'flex', 
-            height: '100vh', 
-            flexDirection: 'column'
-          }}>
-            {appError && (
-              <Box sx={{ 
-                bgcolor: 'error.main', 
-                color: 'error.contrastText', 
-                p: 1, 
-                textAlign: 'center' 
-              }}>
-                <Typography>{appError}</Typography>
+      <AuthProvider>
+        <RadioProvider>
+          <Router>
+            <Box sx={{ 
+              display: 'flex', 
+              height: '100vh', 
+              flexDirection: 'column'
+            }}>
+              {appError && (
+                <Box sx={{ 
+                  bgcolor: 'error.main', 
+                  color: 'error.contrastText', 
+                  p: 1, 
+                  textAlign: 'center' 
+                }}>
+                  <Typography>{appError}</Typography>
+                </Box>
+              )}
+              
+              <MiniPlayer />
+              
+              <Box sx={{ flex: 1, overflow: 'auto' }}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route
+                    path="/"
+                    element={
+                      <PrivateRoute>
+                        <Layout />
+                      </PrivateRoute>
+                    }
+                  >
+                    <Route index element={<Dashboard />} />
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="radio" element={<Radio />} />
+                  </Route>
+                  <Route
+                    path="/clienti"
+                    element={
+                      <PrivateRoute>
+                        <Cliente />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/magazzino"
+                    element={
+                      <PrivateRoute>
+                        <Magazzino />
+                      </PrivateRoute>
+                    }
+                  />
+                  <Route
+                    path="/personale"
+                    element={
+                      <PrivateRoute>
+                        <Personale />
+                      </PrivateRoute>
+                    }
+                  />
+                </Routes>
               </Box>
-            )}
-            
-            <MiniPlayer />
-            
-            <Box sx={{ flex: 1, overflow: 'auto' }}>
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/clienti" element={<Cliente />} />
-                <Route path="/magazzino" element={<Magazzino />} />
-                <Route path="/radio" element={<Radio />} />
-                <Route path="/personale" element={<Personale />} />
-              </Routes>
+              
+              <UpdateNotification />
             </Box>
-            
-            <UpdateNotification />
-          </Box>
-        </Router>
-      </RadioProvider>
+          </Router>
+        </RadioProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

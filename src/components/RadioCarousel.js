@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, Profiler, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Box, IconButton, Typography, useTheme, Snackbar, Alert, TextField, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
@@ -46,50 +46,22 @@ const ScrollingText = styled(Typography)(({ theme, isScrolling }) => ({
   textShadow: '0 2px 4px rgba(0,0,0,0.5)'
 }));
 
-// Utility per il profiling
-const onRenderCallback = (
-  id, // l'id del componente profilato
-  phase, // "mount" o "update"
-  actualDuration, // tempo speso nel rendering
-  baseDuration, // tempo stimato senza memoization
-  startTime, // quando il rendering è iniziato
-  commitTime, // quando React ha committato l'update
-  interactions // Set di interazioni tracciate per il render
-) => {
-  console.log(`[Profiler] ${id}:`, {
-    phase,
-    actualDuration: Math.round(actualDuration * 100) / 100,
-    baseDuration: Math.round(baseDuration * 100) / 100,
-    startTime: Math.round(startTime * 100) / 100,
-    commitTime: Math.round(commitTime * 100) / 100
-  });
-};
-
-function RadioCarousel({ onRadioChange, searchQuery }) {
+function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [failedImages, setFailedImages] = useState({});
   const [error, setError] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState({});
-  const [currentView, setCurrentView] = useState('popular'); // 'popular', 'search', 'favorites', 'history'
+  const [currentView, setCurrentView] = useState('popular');
   const [scrollingTexts, setScrollingTexts] = useState({});
   const swiperRef = useRef(null);
   const [popularRadios, setPopularRadios] = useState([]);
   const [isScrolling, setIsScrolling] = useState(false);
-  const isScrollingRef = useRef(false); // per ridurre re-render
+  const isScrollingRef = useRef(false);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 10 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadingBatchSize = 10;
-  const renderCount = useRef(0);
-  const lastRenderTime = useRef(window.performance.now());
-  const frameRef = useRef(0);
-  const lastFrameTime = useRef(window.performance.now());
-  const performanceData = useRef({
-    frames: [],
-    scrollEvents: 0,
-    loadEvents: 0
-  });
   
   const { currentRadio, isPlaying, playRadio, toggleFavorite, togglePlay } = useRadio();
   const theme = useTheme();
@@ -144,17 +116,20 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
   const searchRadios = async (query) => {
     if (!query) return;
     
+    console.log('🔍 Iniziando ricerca per:', query);
     setIsLoading(true);
     setCurrentView('search');
     try {
       const data = await RadioBrowserAPI.searchRadios(query, 20);
+      console.log('📻 Risultati ricerca:', data.length);
       const formattedRadios = formatRadioData(data);
       setSearchResults(formattedRadios);
     } catch (error) {
-      console.error('Errore nella ricerca:', error);
+      console.error('❌ Errore nella ricerca:', error);
       setError('Errore nella ricerca delle radio. Riprova più tardi.');
     } finally {
       setIsLoading(false);
+      onSearchComplete?.();
     }
   };
 
@@ -186,8 +161,19 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
     searchRadios(searchQuery);
   };
 
+  // Aggiungo l'effetto per ascoltare i cambiamenti di searchQuery
+  useEffect(() => {
+    console.log('🔄 searchQuery cambiato:', searchQuery);
+    if (searchQuery) {
+      searchRadios(searchQuery);
+    } else {
+      setSearchResults([]);
+      setCurrentView('popular');
+    }
+  }, [searchQuery]);
+
   const handleRadioClick = (radio) => {
-    if (isScrolling) return; // Ignora il click se c'è stato uno scroll
+    if (isScrolling) return;
     
     if (currentRadio?.id === radio.id) {
       togglePlay();
@@ -207,7 +193,7 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
   };
 
   const handleToggleFavorite = (radio) => {
-    if (isScrolling) return; // Ignora il click se c'è stato uno scroll
+    if (isScrolling) return;
     toggleFavorite(radio);
     setCurrentIndex(prev => prev);
   };
@@ -216,7 +202,6 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
     playRadio(radio);
   };
 
-  // Ottiene il conteggio dei preferiti e della cronologia
   const getFavoritesCount = () => {
     return RadioStorage.getFavorites().length;
   };
@@ -225,7 +210,6 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
     return RadioStorage.getHistory().length;
   };
 
-  // Determina quali radio mostrare in base alla vista corrente
   const getDisplayRadios = () => {
     switch (currentView) {
       case 'search':
@@ -240,12 +224,10 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
     }
   };
 
-  // Ottimizzazione del rendering con useMemo per le radio
   const displayRadios = useMemo(() => {
     return getDisplayRadios();
   }, [currentView, popularRadios, searchResults, searchQuery]);
 
-  // Funzione per caricare più radio
   const loadMoreRadios = async () => {
     if (isLoadingMore) return;
 
@@ -273,46 +255,23 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
     }
   };
 
-  // Ottimizzazione scroll handler con throttling
-  const handleScroll = useMemo(() => {
-    let lastCall = 0;
-    const throttleInterval = 16; // circa 60fps
-    let scrollTimeout;
+  const handleScroll = useCallback((swiper) => {
+    if (!isScrollingRef.current) {
+      isScrollingRef.current = true;
+      setIsScrolling(true);
+    }
+    setCurrentIndex(swiper.activeIndex);
 
-    return (swiper) => {
-      const now = window.performance.now();
-      
-      if (now - lastCall >= throttleInterval) {
-        performanceData.current.scrollEvents++;
-        if (!isScrollingRef.current) {
-          isScrollingRef.current = true;
-          setIsScrolling(true); // trigger re-render solo quando cambia
-        }
-        setCurrentIndex(swiper.activeIndex);
+    if (!isLoadingMore && swiper.activeIndex + 5 >= displayRadios.length) {
+      loadMoreRadios();
+    }
 
-        // Carica più radio solo quando siamo vicini alla fine e non stiamo già caricando
-        if (!isLoadingMore && swiper.activeIndex + 5 >= displayRadios.length) {
-          performanceData.current.loadEvents++;
-          loadMoreRadios();
-        }
-
-        lastCall = now;
-        // Log dettagliato ogni 20 eventi di scroll per non intasare la console
-        if (performanceData.current.scrollEvents % 20 === 0) {
-          console.log(`[Scroll] index=${swiper.activeIndex} / ${displayRadios.length} (events=${performanceData.current.scrollEvents})`);
-        }
-      }
-
-      // Debounce dello stato di scroll con timeout più lungo
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => {
-        isScrollingRef.current = false;
-        setIsScrolling(false);
-      }, 300);
-    };
+    setTimeout(() => {
+      isScrollingRef.current = false;
+      setIsScrolling(false);
+    }, 300);
   }, [displayRadios.length, isLoadingMore, loadMoreRadios]);
 
-  // Funzione di rendering originale delle slide
   const renderRadioSlide = useCallback((radio) => (
     <SwiperSlide
       key={radio.id}
@@ -365,154 +324,94 @@ function RadioCarousel({ onRadioChange, searchQuery }) {
     </SwiperSlide>
   ), [currentRadio, isPlaying, isScrolling, handleRadioClick, handleTextOverflow, handleToggleFavorite]);
 
-  // Performance monitoring
-  useEffect(() => {
-    renderCount.current++;
-    const currentTime = window.performance.now();
-    const timeSinceLastRender = currentTime - lastRenderTime.current;
-    
-    console.log(`[Performance] Render #${renderCount.current}:`, {
-      timeSinceLastRender: Math.round(timeSinceLastRender * 100) / 100 + 'ms',
-      displayRadiosLength: displayRadios.length
-    });
-    
-    lastRenderTime.current = currentTime;
-  });
-
-  // Monitor delle performance
-  useEffect(() => {
-    const logPerformance = () => {
-      const currentTime = window.performance.now();
-      const frameDelta = currentTime - lastFrameTime.current;
-      
-      performanceData.current.frames.push(frameDelta);
-      if (performanceData.current.frames.length > 60) {
-        performanceData.current.frames.shift();
-      }
-
-      const avgFrameTime = performanceData.current.frames.reduce((a, b) => a + b, 0) / performanceData.current.frames.length;
-      const fps = 1000 / avgFrameTime;
-
-      if (frameRef.current % 60 === 0) { // Log ogni 60 frame (~1s a 60fps)
-        console.log(`[Performance] Stats:`, {
-          fps: Math.round(fps),
-          frameTime: Math.round(frameDelta * 100) / 100 + 'ms',
-          scrollEvents: performanceData.current.scrollEvents,
-          loadEvents: performanceData.current.loadEvents,
-          memory: window.performance?.memory ? {
-            usedJS: Math.round(window.performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
-            totalJS: Math.round(window.performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB',
-            limitJS: Math.round(window.performance.memory.jsHeapSizeLimit / 1024 / 1024) + ' MB'
-          } : 'N/A'
-        });
-      }
-
-      lastFrameTime.current = currentTime;
-      frameRef.current = window.requestAnimationFrame(logPerformance);
-    };
-
-    frameRef.current = window.requestAnimationFrame(logPerformance);
-
-    return () => {
-      window.cancelAnimationFrame(frameRef.current);
-    };
-  }, []);
-
   return (
-    <Profiler id="RadioCarousel" onRender={onRenderCallback}>
-      <CarouselContainer>
-        {/* Menu laterale */}
-        <RadioSideMenu 
-          onFilterChange={handleFilterChange}
-          onRadioSelect={handleSelectFromHistory}
-          favoritesCount={getFavoritesCount()}
-          historyCount={getHistoryCount()}
-        />
-        
-        {isLoading && displayRadios.length === 0 && (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            width: '100%',
-            height: '100%'
-          }}>
-            <CircularProgress size={60} sx={{ color: 'white' }} />
-          </Box>
-        )}
-
-        <Box sx={{ width: '100%', flex: 1 }}>
-          <Swiper
-            ref={swiperRef}
-            modules={[FreeMode, Virtual]}
-            freeMode={{
-              enabled: true,
-              momentum: true,
-              momentumRatio: 0.3,
-              momentumVelocityRatio: 0.3,
-              momentumBounce: false,
-              momentumBounceRatio: 1
-            }}
-            spaceBetween={20}
-            slidesPerView="auto"
-            centeredSlides={true}
-            onSlideChange={handleScroll}
-            onTouchStart={() => {
-              isScrollingRef.current = true;
-              setIsScrolling(true);
-              performanceData.current.scrollEvents = 0;
-            }}
-            onTouchEnd={() => {
-              setTimeout(() => {
-                isScrollingRef.current = false;
-                setIsScrolling(false);
-              }, 300);
-            }}
-            preloadImages={false}
-            style={{
-              width: '100%',
-              height: '100%',
-              padding: '0 20px',
-              willChange: 'transform',
-              transformStyle: 'preserve-3d'
-            }}
-          >
-            {displayRadios.map(renderRadioSlide)}
-          </Swiper>
+    <CarouselContainer>
+      <RadioSideMenu 
+        onFilterChange={handleFilterChange}
+        onRadioSelect={handleSelectFromHistory}
+        favoritesCount={getFavoritesCount()}
+        historyCount={getHistoryCount()}
+      />
+      
+      {isLoading && displayRadios.length === 0 && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          width: '100%',
+          height: '100%'
+        }}>
+          <CircularProgress size={60} sx={{ color: 'white' }} />
         </Box>
+      )}
 
-        {isLoadingMore && (
-          <Box sx={{ 
-            position: 'absolute',
-            bottom: 20,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 1000
-          }}>
-            <CircularProgress size={30} sx={{ color: 'white' }} />
-          </Box>
-        )}
-
-        <Snackbar 
-          open={!!error} 
-          autoHideDuration={2000} 
-          onClose={handleCloseError}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      <Box sx={{ width: '100%', flex: 1 }}>
+        <Swiper
+          ref={swiperRef}
+          modules={[FreeMode, Virtual]}
+          freeMode={{
+            enabled: true,
+            momentum: true,
+            momentumRatio: 0.3,
+            momentumVelocityRatio: 0.3,
+            momentumBounce: false,
+            momentumBounceRatio: 1
+          }}
+          spaceBetween={20}
+          slidesPerView="auto"
+          centeredSlides={true}
+          onSlideChange={handleScroll}
+          onTouchStart={() => {
+            isScrollingRef.current = true;
+            setIsScrolling(true);
+          }}
+          onTouchEnd={() => {
+            setTimeout(() => {
+              isScrollingRef.current = false;
+              setIsScrolling(false);
+            }, 300);
+          }}
+          preloadImages={false}
+          style={{
+            width: '100%',
+            height: '100%',
+            padding: '0 20px',
+            willChange: 'transform',
+            transformStyle: 'preserve-3d'
+          }}
         >
-          <Alert 
-            onClose={handleCloseError} 
-            severity={error?.severity || 'error'} 
-            sx={{ width: '100%' }}
-          >
-            {error?.message || error}
-          </Alert>
-        </Snackbar>
-      </CarouselContainer>
-    </Profiler>
+          {displayRadios.map(renderRadioSlide)}
+        </Swiper>
+      </Box>
+
+      {isLoadingMore && (
+        <Box sx={{ 
+          position: 'absolute',
+          bottom: 20,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000
+        }}>
+          <CircularProgress size={30} sx={{ color: 'white' }} />
+        </Box>
+      )}
+
+      <Snackbar 
+        open={!!error} 
+        autoHideDuration={2000} 
+        onClose={handleCloseError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseError} 
+          severity={error?.severity || 'error'} 
+          sx={{ width: '100%' }}
+        >
+          {error?.message || error}
+        </Alert>
+      </Snackbar>
+    </CarouselContainer>
   );
 }
 
-// Ottimizzazione con memo
-export default React.memo(RadioCarousel, (prevProps, nextProps) => {
-  return prevProps.onRadioChange === nextProps.onRadioChange;
-}); 
+export default React.memo(RadioCarousel); 

@@ -8,13 +8,18 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useNavigate } from 'react-router-dom';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useNavigate, useLocation } from 'react-router-dom';
 import MiniPlayer from './MiniPlayer';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { useAuth } from '../contexts/AuthContext';
 
 const TopBar = ({ title, showBack = true, onMenuClick }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { logout } = useAuth();
+  const isDashboard = location.pathname === '/' || location.pathname === '/dashboard';
   const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
@@ -25,26 +30,31 @@ const TopBar = ({ title, showBack = true, onMenuClick }) => {
     return () => clearInterval(timer);
   }, []);
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Errore durante il logout:', error);
+    }
+  };
+
   return (
     <AppBar position="static" color="primary" elevation={0}>
       <Toolbar>
-        {showBack ? (
+        {showBack && (
           <IconButton
             edge="start"
             color="inherit"
-            onClick={() => navigate(-1)}
+            aria-label="back"
+            onClick={isDashboard ? handleLogout : handleBack}
             sx={{ mr: 2 }}
           >
-            <ArrowBackIcon />
-          </IconButton>
-        ) : (
-          <IconButton
-            edge="start"
-            color="inherit"
-            onClick={onMenuClick}
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
+            {isDashboard ? <LogoutIcon /> : <ArrowBackIcon />}
           </IconButton>
         )}
         

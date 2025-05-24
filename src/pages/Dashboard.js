@@ -64,7 +64,7 @@ function Dashboard() {
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      <TopBar title="Eddy Style" showBack={false} />
+      <TopBar title="Eddy Style" showBack={true} />
       
       <Box sx={{ 
         flexGrow: 1, 

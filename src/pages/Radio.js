@@ -8,7 +8,19 @@ import { useRadio } from '../contexts/RadioContext';
 
 function Radio() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const { currentRadio, isPlaying, togglePlay } = useRadio();
+
+  const handleSearchSubmit = (query) => {
+    console.log('🎯 Radio: handleSearchSubmit chiamato con:', query);
+    setIsSearching(true);
+    setSearchQuery(query);
+  };
+
+  const handleSearchChange = (value) => {
+    console.log('🎯 Radio: handleSearchChange chiamato con:', value);
+    setSearchQuery(value);
+  };
 
   return (
     <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -34,13 +46,17 @@ function Radio() {
         }}>
           <RadioSearchBar 
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            isLoading={false}
+            onSearchChange={handleSearchChange}
+            onSearchSubmit={handleSearchSubmit}
+            isLoading={isSearching}
           />
         </Box>
       </Box>
       <Box sx={{ flex: 1, overflow: 'auto' }}>
-        <RadioCarousel searchQuery={searchQuery} />
+        <RadioCarousel 
+          searchQuery={searchQuery} 
+          onSearchComplete={() => setIsSearching(false)}
+        />
       </Box>
     </Container>
   );
