@@ -1,50 +1,50 @@
-# Eddy Style - Gestione Parrucchieri
+# Eddy Style
 
-Applicazione desktop per la gestione di un negozio di parrucchieri, sviluppata con Electron e React.
+Applicazione web per la gestione di un negozio di parrucchieri, sviluppata con React.
 
-## Funzionalità
+## Struttura del Progetto
 
-- Gestione clienti e appuntamenti
-- Gestione magazzino
-- Web radio integrata
-- Interfaccia fullscreen
+- `/src` - Codice sorgente dell'applicazione
+  - `/components` - Componenti React riutilizzabili
+  - `/pages` - Componenti delle pagine principali
+  - `/services` - Servizi e API
+  - `/contexts` - Context React per la gestione dello stato
+  - `/utils` - Utility e funzioni helper
+  - `/config` - File di configurazione
 
-## Requisiti di Sistema
+## Script Disponibili
 
-- Windows 10 o superiore
-- Node.js 16.x o superiore
-- npm 8.x o superiore
+- `npm start` - Avvia l'applicazione in modalità sviluppo
+- `npm run build` - Crea una build di produzione
+- `npm run serve` - Serve l'applicazione in produzione
+- `npm run deploy` - Builda e deploya l'applicazione
+
+## Tecnologie Utilizzate
+
+- React
+- Material-UI
+- Firebase
+- React Router
+- Redux Toolkit
+
+## Requisiti
+
+- Node.js 14.0.0 o superiore
+- npm 6.0.0 o superiore
 
 ## Installazione
 
 1. Clona il repository
-2. Installa le dipendenze:
+2. Installa le dipendenze: `npm install`
+3. Avvia l'applicazione: `npm start`
 
-```bash
-npm install
-cd src
-npm install
-```
+## Deployment
 
-## Sviluppo
+L'applicazione è configurata per il deployment su Firebase Hosting. Per deployare:
 
-Per avviare l'applicazione in modalità sviluppo:
+1. Esegui `npm run build`
+2. Esegui `npm run deploy`
 
-```bash
-npm run dev
-```
+## Licenza
 
-## Build
-
-Per creare l'eseguibile dell'applicazione:
-
-```bash
-npm run build
-npm run package
-```
-
-## Struttura del Progetto
-
-- `/src` - Codice sorgente React
-- `/main.js` - File principale Electron
-- `/package.json` - Configurazione progetto
+Questo progetto è sotto licenza MIT.

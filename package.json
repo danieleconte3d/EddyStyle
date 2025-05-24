@@ -1,25 +1,53 @@
 {
-  "name": "eddy-style",
-  "version": "0.0.1",
-  "description": "Applicazione di gestione per parrucchieri",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "dev": "cross-env NODE_ENV=development concurrently \"cd src && npm start\" \"wait-on http://localhost:3000 && electron .\"",
-    "build": "cd src && npm run build",
-    "package": "electron-builder",
-    "publish": "electron-builder --publish always",
-    "prod": "cross-env NODE_ENV=production npm start"
+  "name": "eddy-style-react",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "./",
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^5.14.19",
+    "@mui/material": "^5.17.1",
+    "@reduxjs/toolkit": "^2.0.1",
+    "date-fns": "^4.1.0",
+    "firebase": "^10.8.0",
+    "react": "^18.2.0",
+    "react-color": "^2.19.3",
+    "react-dom": "^18.2.0",
+    "react-redux": "^9.0.4",
+    "react-router-dom": "^6.20.0",
+    "react-scripts": "5.0.1",
+    "swiper": "^11.2.7"
   },
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "concurrently": "^8.2.2",
-    "cross-env": "^7.0.3",
-    "electron": "^28.1.0",
-    "electron-builder": "^24.9.1",
-    "glob": "^10.3.10",
-    "wait-on": "^7.2.0"
+  "scripts": {
+    "start": "react-scripts start",
+    "start:network": "HOST=0.0.0.0 react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "web-test": "BROWSER=none PORT=3001 react-scripts start",
+    "build-web": "react-scripts build && npm run optimize-build",
+    "optimize-build": "echo 'Build ottimizzata per web creata in build/'",
+    "serve": "npx serve -s build -l 3000",
+    "deploy": "npm run build-web && npm run serve"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "resolutions": {
     "glob": "^10.3.10",
@@ -29,48 +57,5 @@
     "**/inflight": "^2.0.0",
     "**/boolean": "^3.2.0",
     "**/boolean/**": "^3.2.0"
-  },
-  "dependencies": {
-    "electron-updater": "^6.6.2",
-    "firebase": "^11.8.1",
-    "react-color": "^2.19.3",
-    "react-draggable": "^4.4.6",
-    "swiper": "^11.2.7"
-  },
-  "build": {
-    "appId": "com.eddystyle.app",
-    "productName": "Eddy Style",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "src/build/**/*",
-      "node_modules/**/*",
-      "main.js"
-    ],
-    "win": {
-      "target": "nsis"
-    },
-    "mac": {
-      "target": [
-        "dmg",
-        "zip"
-      ],
-      "category": "public.app-category.business",
-      "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
-    },
-    "linux": {
-      "target": "AppImage"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "danieleconte3d",
-      "repo": "EddyStyle",
-      "private": false,
-      "releaseType": "release"
-    }
   }
 }
