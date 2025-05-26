@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Box, IconButton, Typography, useTheme, Snackbar, Alert, TextField, CircularProgress } from '@mui/material';
+import { Box, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import SearchIcon from '@mui/icons-material/Search';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
-import { useNavigate } from 'react-router-dom';
 import { radios } from '../config/radios';
 import RadioItem from './RadioItem';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -26,82 +22,22 @@ const CarouselContainer = styled(Box)(({ theme }) => ({
   overflow: 'hidden'
 }));
 
-const ScrollingText = styled(Typography)(({ theme, isScrolling }) => ({
-  width: '100%',
-  whiteSpace: 'nowrap',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  textAlign: 'center',
-  animation: isScrolling ? 'scrollText 10s linear infinite' : 'none',
-  '@keyframes scrollText': {
-    '0%': {
-      transform: 'translateX(0)',
-    },
-    '100%': {
-      transform: 'translateX(-100%)',
-    },
-  },
-  position: 'relative',
-  zIndex: 2,
-  textShadow: '0 2px 4px rgba(0,0,0,0.5)'
-}));
-
 function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [failedImages, setFailedImages] = useState({});
   const [error, setError] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [filters, setFilters] = useState({});
   const [currentView, setCurrentView] = useState('popular');
-  const [scrollingTexts, setScrollingTexts] = useState({});
   const swiperRef = useRef(null);
   const [popularRadios, setPopularRadios] = useState([]);
   const [isScrolling, setIsScrolling] = useState(false);
   const isScrollingRef = useRef(false);
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 10 });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadingBatchSize = 10;
   
   const { currentRadio, isPlaying, playRadio, toggleFavorite, togglePlay } = useRadio();
-  const theme = useTheme();
-  const navigate = useNavigate();
 
-  // Carica le radio popolari all'avvio con paginazione
-  useEffect(() => {
-    const loadInitialRadios = async () => {
-      try {
-        setIsLoading(true);
-        // Carica prima le radio preferite
-        const favorites = RadioStorage.getFavorites();
-        // Poi carica le radio recenti, escludendo quelle già nei preferiti
-        const history = RadioStorage.getHistory().filter(radio => 
-          !favorites.some(fav => fav.id === radio.id)
-        );
-        // Infine carica le radio popolari, escludendo quelle già nei preferiti o recenti
-        const popularData = await RadioBrowserAPI.getPopularRadios(30);
-        const formattedPopularRadios = formatRadioData(popularData).filter(radio => 
-          !favorites.some(fav => fav.id === radio.id) && 
-          !history.some(hist => hist.id === radio.id)
-        );
-        
-        // Combina le radio in ordine: preferite, recenti, popolari
-        const combinedRadios = [...favorites, ...history, ...formattedPopularRadios];
-        setPopularRadios(combinedRadios);
-        setSearchResults([]);
-      } catch (error) {
-        console.error('Errore nel caricamento delle radio:', error);
-        setError('Errore nel caricamento delle radio. Riprova più tardi.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadInitialRadios();
-  }, []);
-  
   // Formatta i dati delle radio in un formato coerente
-  const formatRadioData = (radioData) => {
+  const formatRadioData = useCallback((radioData) => {
     return radioData
       .filter(radio => radio.url_resolved)
       .map(radio => ({
@@ -111,9 +47,9 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
         cover: radio.favicon || 'https://www.radioparadise.com/graphics/logos/rp_250.png',
         color: `#${Math.floor(Math.random()*16777215).toString(16)}`
       }));
-  };
+  }, []);
 
-  const searchRadios = async (query) => {
+  const searchRadios = useCallback(async (query) => {
     if (!query) return;
     
     console.log('🔍 Iniziando ricerca per:', query);
@@ -131,11 +67,10 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
       setIsLoading(false);
       onSearchComplete?.();
     }
-  };
+  }, [formatRadioData, onSearchComplete]);
 
   // Gestisce i filtri
-  const handleFilterChange = async (newFilters) => {
-    setFilters(newFilters);
+  const handleFilterChange = useCallback(async (newFilters) => {
     if (Object.keys(newFilters).length > 0) {
       setIsLoading(true);
       try {
@@ -150,16 +85,11 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
         setIsLoading(false);
       }
     }
-  };
+  }, [formatRadioData]);
 
-  const handleCloseError = () => {
+  const handleCloseError = useCallback(() => {
     setError(null);
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    searchRadios(searchQuery);
-  };
+  }, []);
 
   // Aggiungo l'effetto per ascoltare i cambiamenti di searchQuery
   useEffect(() => {
@@ -170,9 +100,9 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
       setSearchResults([]);
       setCurrentView('popular');
     }
-  }, [searchQuery]);
+  }, [searchQuery, searchRadios]);
 
-  const handleRadioClick = (radio) => {
+  const handleRadioClick = useCallback((radio) => {
     if (isScrolling) return;
     
     if (currentRadio?.id === radio.id) {
@@ -180,37 +110,36 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
     } else {
       playRadio(radio);
     }
-  };
+  }, [currentRadio, isScrolling, playRadio, togglePlay]);
 
-  const handleTextOverflow = (radioId, text) => {
+  const handleTextOverflow = useCallback((radioId, text) => {
     const textElement = document.getElementById(`radio-text-${radioId}`);
     if (textElement) {
       const isOverflowing = textElement.scrollWidth > textElement.clientWidth;
       if (isOverflowing) {
-        setScrollingTexts(prev => ({ ...prev, [radioId]: true }));
+        // Gestiamo l'overflow del testo se necessario
       }
     }
-  };
+  }, []);
 
-  const handleToggleFavorite = (radio) => {
+  const handleToggleFavorite = useCallback((radio) => {
     if (isScrolling) return;
     toggleFavorite(radio);
-    setCurrentIndex(prev => prev);
-  };
+  }, [isScrolling, toggleFavorite]);
 
-  const handleSelectFromHistory = (radio) => {
+  const handleSelectFromHistory = useCallback((radio) => {
     playRadio(radio);
-  };
+  }, [playRadio]);
 
-  const getFavoritesCount = () => {
+  const getFavoritesCount = useCallback(() => {
     return RadioStorage.getFavorites().length;
-  };
+  }, []);
 
-  const getHistoryCount = () => {
+  const getHistoryCount = useCallback(() => {
     return RadioStorage.getHistory().length;
-  };
+  }, []);
 
-  const getDisplayRadios = () => {
+  const getDisplayRadios = useCallback(() => {
     switch (currentView) {
       case 'search':
         return searchResults;
@@ -222,13 +151,13 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
       default:
         return popularRadios.length > 0 ? popularRadios : radios;
     }
-  };
+  }, [currentView, popularRadios, searchResults]);
 
   const displayRadios = useMemo(() => {
     return getDisplayRadios();
-  }, [currentView, popularRadios, searchResults, searchQuery]);
+  }, [getDisplayRadios]);
 
-  const loadMoreRadios = async () => {
+  const loadMoreRadios = useCallback(async () => {
     if (isLoadingMore) return;
 
     try {
@@ -247,20 +176,21 @@ function RadioCarousel({ onRadioChange, searchQuery, onSearchComplete }) {
             setSearchResults(prev => [...prev, ...formatRadioData(newData)]);
           }
           break;
+        default:
+          break;
       }
     } catch (error) {
       console.error('Errore nel caricamento di altre radio:', error);
     } finally {
       setIsLoadingMore(false);
     }
-  };
+  }, [currentView, formatRadioData, getDisplayRadios, isLoadingMore, loadingBatchSize, searchQuery]);
 
   const handleScroll = useCallback((swiper) => {
     if (!isScrollingRef.current) {
       isScrollingRef.current = true;
       setIsScrolling(true);
     }
-    setCurrentIndex(swiper.activeIndex);
 
     if (!isLoadingMore && swiper.activeIndex + 5 >= displayRadios.length) {
       loadMoreRadios();

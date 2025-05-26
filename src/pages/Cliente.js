@@ -7,12 +7,13 @@ import WeekCalendar from '../components/WeekCalendar';
 import AppointmentDialog from '../components/AppointmentDialog';
 import TopBar from '../components/TopBar';
 import StylistFilter from '../components/StylistFilter';
-import { startOfWeek, endOfWeek, addWeeks } from 'date-fns';
+import { startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { appointmentsService, personaleService, initializeDefaultPersonale } from '../services/firebaseService';
 
 function Cliente() {
   const [appointments, setAppointments] = useState([]);
   const [stylists, setStylists] = useState([]);
+  const [allPersonale, setAllPersonale] = useState([]);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
@@ -27,13 +28,14 @@ function Cliente() {
         // Inizializza il personale di default se necessario
         await initializeDefaultPersonale();
         
-        const personale = await personaleService.getAllPersonale();
-        console.log('Personale caricato:', personale);
-        setStylists(personale.map(p => ({
-          id: p.id,
-          name: p.nome,
-          color: p.colore
-        })));
+        // Carica tutto il personale per il dialog
+        const allPersonale = await personaleService.getAllPersonale();
+        setAllPersonale(allPersonale);
+        
+        // Carica solo il personale attivo per il filtro
+        const activePersonale = await personaleService.getActivePersonale();
+        console.log('Personale attivo caricato:', activePersonale);
+        setStylists(activePersonale);
       } catch (error) {
         console.error('Errore nel caricamento del personale:', error);
       }
@@ -49,13 +51,17 @@ function Cliente() {
 
   const loadAppointments = async () => {
     try {
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
+      // Calcola la data di inizio e fine della settimana corrente
+      const today = new Date();
+      const weekStart = startOfWeek(addWeeks(today, currentWeek), { weekStartsOn: 1 }); // Inizia dal lunedì
+      const weekEnd = endOfWeek(addWeeks(today, currentWeek), { weekStartsOn: 1 }); // Finisce la domenica
       
-      const endDate = new Date();
-      endDate.setDate(endDate.getDate() + 30); // Carica appuntamenti per i prossimi 30 giorni
+      console.log('Caricamento appuntamenti per la settimana:', {
+        inizio: weekStart.toISOString(),
+        fine: weekEnd.toISOString()
+      });
       
-      const appointments = await appointmentsService.getAppointmentsByDateRange(startDate, endDate);
+      const appointments = await appointmentsService.getAppointmentsByDateRange(weekStart, weekEnd);
       
       // Trasforma gli appuntamenti nel formato richiesto dal calendario
       const transformedAppointments = appointments.map(appointment => {
@@ -70,7 +76,9 @@ function Cliente() {
           endTime: endTime.toISOString(),
           notes: appointment.note,
           color: appointment.personale_colore || '#FF5722',
-          personale_id: appointment.personale_id
+          personale_id: appointment.personale_id,
+          personale_colore: appointment.personale_colore,
+          personale_isEx: appointment.personale_isEx
         };
       });
       
@@ -285,7 +293,7 @@ function Cliente() {
         selectedDate={selectedDate}
         selectedTime={selectedTime}
         onTimeChange={(e) => setSelectedTime(e.target.value)}
-        stylists={stylists}
+        personale={allPersonale}
       />
     </Container>
   );

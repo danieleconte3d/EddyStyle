@@ -46,16 +46,16 @@ function StylistFilter({ stylists, selectedStylistIds, onStylistSelect }) {
           size="small"
           sx={{
             minWidth: '100px',
-            borderColor: stylist.color,
-            color: selectedStylistIds.includes(stylist.id) ? 'white' : stylist.color,
-            backgroundColor: selectedStylistIds.includes(stylist.id) ? stylist.color : 'transparent',
+            borderColor: stylist.colore,
+            color: selectedStylistIds.includes(stylist.id) ? 'white' : stylist.colore,
+            backgroundColor: selectedStylistIds.includes(stylist.id) ? stylist.colore : 'transparent',
             '&:hover': {
-              backgroundColor: selectedStylistIds.includes(stylist.id) ? stylist.color : `${stylist.color}20`,
-              borderColor: stylist.color,
+              backgroundColor: selectedStylistIds.includes(stylist.id) ? stylist.colore : `${stylist.colore}20`,
+              borderColor: stylist.colore,
             }
           }}
         >
-          {stylist.name}
+          {stylist.nome}
         </Button>
       ))}
     </Paper>

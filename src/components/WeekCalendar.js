@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Grid, useTheme, useMediaQuery, IconButton, Typography, Dialog, Button, Paper } from '@mui/material';
 import WeekDay from './WeekDay';
 import WeekNavigator from './WeekNavigator';
-import { format, addDays, subDays, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, addDays, subDays, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek } from 'date-fns';
 import { it } from 'date-fns/locale';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -85,6 +85,14 @@ function WeekCalendar({
   const handlePrevDay = () => {
     const newDate = subDays(currentDate, 1);
     setCurrentDate(newDate);
+    setSelectedDate(newDate);
+    
+    // Aggiorna la settimana se necessario
+    const newWeek = Math.floor((newDate - startOfWeek(new Date(), { weekStartsOn: 1 })) / (7 * 24 * 60 * 60 * 1000));
+    if (newWeek !== currentWeek && onWeekChange) {
+      onWeekChange(newWeek);
+    }
+    
     if (onDaySelect) {
       onDaySelect(newDate);
     }
@@ -93,6 +101,14 @@ function WeekCalendar({
   const handleNextDay = () => {
     const newDate = addDays(currentDate, 1);
     setCurrentDate(newDate);
+    setSelectedDate(newDate);
+    
+    // Aggiorna la settimana se necessario
+    const newWeek = Math.floor((newDate - startOfWeek(new Date(), { weekStartsOn: 1 })) / (7 * 24 * 60 * 60 * 1000));
+    if (newWeek !== currentWeek && onWeekChange) {
+      onWeekChange(newWeek);
+    }
+    
     if (onDaySelect) {
       onDaySelect(newDate);
     }
@@ -100,7 +116,15 @@ function WeekCalendar({
 
   const handleDateSelect = (date) => {
     setCurrentDate(date);
+    setSelectedDate(date);
     setCalendarOpen(false);
+    
+    // Aggiorna la settimana se necessario
+    const newWeek = Math.floor((date - startOfWeek(new Date(), { weekStartsOn: 1 })) / (7 * 24 * 60 * 60 * 1000));
+    if (newWeek !== currentWeek && onWeekChange) {
+      onWeekChange(newWeek);
+    }
+    
     if (onDaySelect) {
       onDaySelect(date);
     }
@@ -295,17 +319,62 @@ function WeekCalendar({
 
           <Box sx={{ flex: 1, minHeight: 0 }}>
             <WeekDay
-              day={weekDays[0].day}
-              date={weekDays[0].date}
-              isToday={weekDays[0].isToday}
+              day={format(currentDate, 'EEEE', { locale: it })}
+              date={format(currentDate, 'dd MMMM', { locale: it })}
+              isToday={currentDate.toDateString() === new Date().toDateString()}
               isSelected={true}
-              appointments={weekDays[0].appointments}
+              onTimeSlotClick={(time) => onTimeSlotClick && onTimeSlotClick(time, currentDate)}
+              appointments={weekDays.find(day => 
+                day.fullDate.toDateString() === currentDate.toDateString()
+              )?.appointments || []}
               onAppointmentClick={onAppointmentClick}
-              onTimeSlotClick={(time) => onTimeSlotClick && onTimeSlotClick(time, weekDays[0].fullDate)}
             />
           </Box>
         </>
       )}
+    </Box>
+  );
+}
+
+function AppointmentCard({ appointment, onClick }) {
+  const isExOperator = appointment.personale_isEx;
+
+  return (
+    <Box
+      onClick={() => onClick(appointment)}
+      sx={{
+        p: 1,
+        borderRadius: 1,
+        backgroundColor: isExOperator ? 'transparent' : appointment.personale_colore,
+        backgroundImage: isExOperator 
+          ? `repeating-linear-gradient(45deg, ${appointment.personale_colore}, ${appointment.personale_colore} 10px, transparent 10px, transparent 20px)`
+          : 'none',
+        color: 'white',
+        cursor: 'pointer',
+        fontSize: '0.875rem',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        opacity: isExOperator ? 0.3 : 1,
+        '&:hover': {
+          opacity: isExOperator ? 0.5 : 0.8
+        }
+      }}
+    >
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        <Box>{appointment.nome_cliente}</Box>
+        <Box sx={{ 
+          fontSize: '0.8rem',
+          fontWeight: 'bold',
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          borderRadius: 1,
+          px: 1,
+          py: 0.5,
+          textAlign: 'center'
+        }}>
+          {isExOperator ? 'EX OPERATORE' : 'OPERATORE ATTIVO'}
+        </Box>
+      </Box>
     </Box>
   );
 }

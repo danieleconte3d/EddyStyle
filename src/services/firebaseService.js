@@ -9,7 +9,8 @@ import {
   where, 
   orderBy,
   Timestamp,
-  getDoc
+  getDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
@@ -24,10 +25,35 @@ export const personaleService = {
     }));
   },
 
+  // Ottieni personale attivo
+  getActivePersonale: async () => {
+    const querySnapshot = await getDocs(
+      query(collection(db, 'personale'), 
+      where('isEx', 'in', [false, null]))
+    );
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
+  // Ottieni personale esterno
+  getExPersonale: async () => {
+    const querySnapshot = await getDocs(
+      query(collection(db, 'personale'), 
+      where('isEx', '==', true))
+    );
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+  },
+
   // Crea nuovo personale
   createPersonale: async (personale) => {
     const docRef = await addDoc(collection(db, 'personale'), {
       ...personale,
+      isEx: false,
       created_at: Timestamp.now(),
       updated_at: Timestamp.now()
     });
@@ -37,8 +63,12 @@ export const personaleService = {
   // Aggiorna personale esistente
   updatePersonale: async (id, personale) => {
     const docRef = doc(db, 'personale', id);
+    const docSnap = await getDoc(docRef);
+    const currentData = docSnap.data();
+    
     await updateDoc(docRef, {
       ...personale,
+      isEx: currentData.isEx ?? false, // Mantiene il valore esistente o usa false come default
       updated_at: Timestamp.now()
     });
   },
@@ -46,6 +76,45 @@ export const personaleService = {
   // Elimina personale
   deletePersonale: async (id) => {
     await deleteDoc(doc(db, 'personale', id));
+  },
+
+  // Setta personale come esterno
+  setExPersonale: async (id) => {
+    const docRef = doc(db, 'personale', id);
+    await updateDoc(docRef, {
+      isEx: true
+    });
+  },
+
+  // Setta personale come attivo
+  setActivePersonale: async (id) => {
+    const docRef = doc(db, 'personale', id);
+    await updateDoc(docRef, {
+      isEx: false
+    });
+  },
+
+  // Aggiorna in massa tutti i dipendenti esistenti
+  updateAllExistingPersonale: async () => {
+    const querySnapshot = await getDocs(collection(db, 'personale'));
+    const batch = writeBatch(db);
+    let count = 0;
+
+    querySnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.isEx === undefined) {
+        batch.update(doc.ref, { 
+          isEx: false,
+          updated_at: Timestamp.now()
+        });
+        count++;
+      }
+    });
+
+    if (count > 0) {
+      await batch.commit();
+      console.log(`Aggiornati ${count} dipendenti con il campo isEx`);
+    }
   }
 };
 
@@ -83,13 +152,20 @@ export const appointmentsService = {
         if (appointment.personale_id) {
           const personaleDoc = await getDoc(doc(db, 'personale', appointment.personale_id));
           if (personaleDoc.exists()) {
+            const personaleData = personaleDoc.data();
             return {
               ...appointment,
-              personale_colore: personaleDoc.data().colore
+              personale_colore: personaleData.colore || '#1976d2',
+              personale_isEx: personaleData.isEx ?? false,
+              personale_nome: personaleData.nome
             };
           }
         }
-        return appointment;
+        return {
+          ...appointment,
+          personale_colore: '#1976d2',
+          personale_isEx: false
+        };
       })
     );
 

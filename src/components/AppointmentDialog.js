@@ -26,14 +26,15 @@ function AppointmentDialog({
   selectedDate, 
   selectedTime, 
   onTimeChange,
-  stylists = []
+  personale = []
 }) {
   const [formData, setFormData] = React.useState({
     title: '',
     client: '',
     stylistId: '',
     notes: '',
-    duration: 60
+    duration: 60,
+    date: selectedDate
   });
   const [showConfirmDelete, setShowConfirmDelete] = React.useState(false);
 
@@ -49,7 +50,8 @@ function AppointmentDialog({
         client: appointment.client || '',
         stylistId: appointment.personale_id || '',
         notes: appointment.notes || '',
-        duration: validDuration
+        duration: validDuration,
+        date: new Date(appointment.startTime)
       });
     } else {
       setFormData({
@@ -57,10 +59,11 @@ function AppointmentDialog({
         client: '',
         stylistId: '',
         notes: '',
-        duration: 60
+        duration: 60,
+        date: selectedDate
       });
     }
-  }, [appointment]);
+  }, [appointment, selectedDate]);
 
   const handleChange = (field) => (event) => {
     setFormData(prev => ({
@@ -72,7 +75,7 @@ function AppointmentDialog({
   const handleSave = () => {
     onSave({
       ...formData,
-      date: selectedDate,
+      date: formData.date,
       time: selectedTime,
       personale_id: formData.stylistId
     });
@@ -86,6 +89,21 @@ function AppointmentDialog({
     onDelete(appointment.id);
     setShowConfirmDelete(false);
   };
+
+  // Filtra il personale attivo
+  const activePersonale = personale.filter(p => !p.isEx);
+
+  // Se l'appuntamento ha un ex operatore, aggiungilo alla lista
+  const displayPersonale = React.useMemo(() => {
+    if (appointment?.personale_isEx && appointment?.personale_id) {
+      // Cerca l'ex operatore nel personale completo
+      const exOperator = personale.find(p => p.id === appointment.personale_id);
+      if (exOperator) {
+        return [...activePersonale, exOperator];
+      }
+    }
+    return activePersonale;
+  }, [activePersonale, appointment, personale]);
 
   return (
     <>
@@ -118,14 +136,20 @@ function AppointmentDialog({
             
             <Grid container spacing={2}>
               <Grid item xs={6}>
-                {selectedDate && (
-                  <TextField
-                    label="Data"
-                    value={selectedDate.toLocaleDateString('it')}
-                    InputProps={{ readOnly: true }}
-                    fullWidth
-                  />
-                )}
+                <TextField
+                  label="Data"
+                  type="date"
+                  value={formData.date ? formData.date.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const newDate = new Date(e.target.value);
+                    setFormData(prev => ({
+                      ...prev,
+                      date: newDate
+                    }));
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                  fullWidth
+                />
               </Grid>
               <Grid item xs={6}>
                 <TextField
@@ -162,19 +186,17 @@ function AppointmentDialog({
                 onChange={handleChange('stylistId')}
                 label="Operatore"
               >
-                {stylists.map(stylist => (
-                  <MenuItem key={stylist.id} value={stylist.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Box 
-                        sx={{ 
-                          width: 16, 
-                          height: 16, 
-                          borderRadius: '50%', 
-                          bgcolor: stylist.color,
-                          mr: 1 
-                        }} 
-                      />
-                      {stylist.name}
+                {displayPersonale.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Box sx={{ 
+                        width: 16, 
+                        height: 16, 
+                        borderRadius: '50%', 
+                        backgroundColor: p.colore 
+                      }} />
+                      {p.nome}
+                      {p.isEx && ' (Ex)'}
                     </Box>
                   </MenuItem>
                 ))}

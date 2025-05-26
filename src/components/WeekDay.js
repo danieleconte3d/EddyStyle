@@ -345,7 +345,12 @@ function WeekDay({
                   width: `${position.width}px`,
                   margin: `0 ${position.margin}px`,
                   position: 'absolute',
-                  zIndex: 999
+                  zIndex: 999,
+                  backgroundColor: appointment.personale_isEx ? 'transparent' : appointment.color,
+                  backgroundImage: appointment.personale_isEx 
+                    ? `repeating-linear-gradient(45deg, ${appointment.color}, ${appointment.color} 10px, transparent 10px, transparent 20px)`
+                    : 'none',
+                  opacity: appointment.personale_isEx ? 0.5 : 1
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -354,34 +359,36 @@ function WeekDay({
                   }
                 }}
               >
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    fontSize: '0.7rem',
-                    color: 'white',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                >
-                  {formatTime(appointment.startTime)} - {appointment.title}
-                </Typography>
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    display: 'block', 
-                    fontSize: '0.7rem',
-                    color: 'white',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                >
-                  {appointment.client}
-                </Typography>
+                <Box sx={{ opacity: 1 }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      fontWeight: 'bold', 
+                      fontSize: '0.7rem',
+                      color: 'white',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {formatTime(appointment.startTime)} - {appointment.title}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      display: 'block', 
+                      fontSize: '0.7rem',
+                      color: 'white',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.5)',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                  >
+                    {appointment.client}
+                  </Typography>
+                </Box>
               </AppointmentBox>
             );
           })

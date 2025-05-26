@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -31,29 +31,52 @@ import MiniPlayer from '../components/MiniPlayer';
 import ColorPicker from '../components/ColorPicker';
 import TopBar from '../components/TopBar';
 import EditIcon from '@mui/icons-material/Edit';
+import PersonaleCard from '../components/PersonaleCard';
+import PersonaleDialog from '../components/PersonaleDialog';
 import { personaleService } from '../services/firebaseService';
+import Webcam from 'react-webcam';
 
 function Personale() {
   const navigate = useNavigate();
+  const webcamRef = useRef(null);
   const [personale, setPersonale] = useState([]);
+  const [exPersonale, setExPersonale] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
+  const [openCameraDialog, setOpenCameraDialog] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [showExPersonale, setShowExPersonale] = useState(false);
   const [selectedPersonale, setSelectedPersonale] = useState(null);
   const [formData, setFormData] = useState({
     nome: '',
     colore: '#1976d2',
-    telefono: ''
+    telefono: '',
+    foto: null
   });
 
   useEffect(() => {
-    loadPersonale();
+    const initializeData = async () => {
+      try {
+        // Prima aggiorniamo i dati esistenti
+        await personaleService.updateAllExistingPersonale();
+        // Poi carichiamo il personale
+        await loadPersonale();
+      } catch (error) {
+        console.error('Errore durante l\'inizializzazione:', error);
+      }
+    };
+
+    initializeData();
   }, []);
 
   const loadPersonale = async () => {
     try {
-      const data = await personaleService.getAllPersonale();
-      setPersonale(data);
+      const [activeData, exData] = await Promise.all([
+        personaleService.getActivePersonale(),
+        personaleService.getExPersonale()
+      ]);
+      setPersonale(activeData);
+      setExPersonale(exData);
     } catch (error) {
       console.error('Errore nel caricamento del personale:', error);
     } finally {
@@ -67,14 +90,16 @@ function Personale() {
       setFormData({
         nome: personale.nome,
         colore: personale.colore,
-        telefono: personale.telefono || ''
+        telefono: personale.telefono || '',
+        foto: personale.foto || null
       });
     } else {
       setSelectedPersonale(null);
       setFormData({
         nome: '',
         colore: '#1976d2',
-        telefono: ''
+        telefono: '',
+        foto: null
       });
     }
     setOpenDialog(true);
@@ -86,8 +111,15 @@ function Personale() {
     setFormData({
       nome: '',
       colore: '#1976d2',
-      telefono: ''
+      telefono: '',
+      foto: null
     });
+  };
+
+  const handleCapture = () => {
+    const imageSrc = webcamRef.current.getScreenshot();
+    setFormData({ ...formData, foto: imageSrc });
+    setOpenCameraDialog(false);
   };
 
   const handleSubmit = async () => {
@@ -104,27 +136,17 @@ function Personale() {
     }
   };
 
-  const handleDeleteClick = (personale) => {
-    setSelectedPersonale(personale);
-    setOpenDeleteDialog(true);
-  };
-
   const handleDeleteConfirm = async () => {
     if (!selectedPersonale) return;
     
     try {
-      await personaleService.deletePersonale(selectedPersonale.id);
+      await personaleService.setExPersonale(selectedPersonale.id);
       setOpenDeleteDialog(false);
       setSelectedPersonale(null);
       loadPersonale();
     } catch (error) {
       console.error('Errore nell\'eliminazione del personale:', error);
     }
-  };
-
-  const handleDeleteCancel = () => {
-    setOpenDeleteDialog(false);
-    setSelectedPersonale(null);
   };
 
   if (loading) {
@@ -142,113 +164,68 @@ function Personale() {
     <Container maxWidth={false} disableGutters sx={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       <TopBar title="Gestione Personale" showBackButton={true} />
 
-      <Box sx={{ flex: 1, overflow: 'auto', p: 3 }}>
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end' }}>
+      <Box sx={{ flex: 1, overflow: 'auto', p: 1 }}>
+        <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Button 
-            variant="contained" 
-            onClick={() => handleOpenDialog()}
+            variant="outlined" 
+            onClick={() => setShowExPersonale(!showExPersonale)}
           >
-            Aggiungi Personale
+            {showExPersonale ? 'Personale Attivo' : 'Storico Ex Dipendenti'}
           </Button>
+          {!showExPersonale && (
+            <Button 
+              variant="contained" 
+              onClick={() => handleOpenDialog()}
+            >
+              Aggiungi Personale
+            </Button>
+          )}
         </Box>
 
-        <Grid container spacing={3}>
-          {personale.map((p) => (
-            <Grid item xs={12} sm={6} md={4} key={p.id}>
-              <Card sx={{ 
-                backgroundColor: p.colore,
-                color: 'white',
-                position: 'relative'
-              }}>
-                <CardContent>
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: 8, 
-                    right: 8, 
-                    display: 'flex', 
-                    gap: 1 
-                  }}>
-                    <IconButton 
-                      size="small" 
-                      onClick={() => handleOpenDialog(p)}
-                      sx={{ color: 'white' }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton 
-                      size="small" 
-                      onClick={() => handleDeleteClick(p)}
-                      sx={{ color: 'white' }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                  <Typography variant="h5" component="div" sx={{ mb: 1 }}>
-                    {p.nome}
-                  </Typography>
-                  {p.telefono && (
-                    <Typography variant="body2">
-                      Tel: {p.telefono}
-                    </Typography>
-                  )}
-                </CardContent>
-              </Card>
-            </Grid>
+        <Box sx={{ 
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+          gap: 5,
+          width: '100%'
+        }}>
+          {(showExPersonale ? exPersonale : personale).map((p) => (
+            <Box key={p.id} sx={{ display: 'flex', justifyContent: 'center' }}>
+              <PersonaleCard
+                personale={p}
+                onClick={handleOpenDialog}
+              />
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Box>
 
-      <Dialog open={openDialog} onClose={handleCloseDialog}>
-        <DialogTitle>
-          {selectedPersonale ? 'Modifica Personale' : 'Nuovo Personale'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-              label="Nome"
-              value={formData.nome}
-              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Telefono"
-              value={formData.telefono}
-              onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-              sx={{ mb: 2 }}
-            />
-            <Typography variant="subtitle1" sx={{ mb: 1 }}>
-              Colore
-            </Typography>
-            <ColorPicker
-              color={formData.colore}
-              onChange={(color) => setFormData({ ...formData, colore: color.hex })}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Annulla</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            Salva
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PersonaleDialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        onSubmit={handleSubmit}
+        onDelete={() => {
+          setOpenDialog(false);
+          setOpenDeleteDialog(true);
+        }}
+        selectedPersonale={selectedPersonale}
+        formData={formData}
+        setFormData={setFormData}
+      />
 
-      <Dialog open={openDeleteDialog} onClose={handleDeleteCancel}>
-        <DialogTitle>Conferma Eliminazione</DialogTitle>
+      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
+        <DialogTitle>Conferma Modifica Stato</DialogTitle>
         <DialogContent>
           <Typography>
-            Sei sicuro di voler eliminare {selectedPersonale?.nome}?
-            Questa azione non può essere annullata.
+            Sei sicuro di voler spostare {selectedPersonale?.nome} tra gli ex dipendenti?
+            Potrai sempre ripristinare il suo stato in futuro.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDeleteCancel} color="inherit">
+          <Button onClick={() => setOpenDeleteDialog(false)} color="inherit">
             Annulla
           </Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained">
-            Elimina
+            Conferma
           </Button>
         </DialogActions>
       </Dialog>
